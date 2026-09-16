@@ -12,17 +12,24 @@ final class AppModel: ObservableObject {
                 selectedSection = compactDestination
             }
             onPanelConfigurationChanged?()
+            updateSystemMetricsActivity()
         }
     }
-    @Published private(set) var mode: NotchMode
+    @Published private(set) var mode: NotchMode {
+        didSet { updateSystemMetricsActivity() }
+    }
     @Published private(set) var isDraggingFileOver = false
-    @Published var selectedSection: NotchSection
+    @Published var selectedSection: NotchSection {
+        didSet { updateSystemMetricsActivity() }
+    }
     @Published private(set) var isPinned: Bool
     @Published var customTimerMinutes = 30
     @Published var transientMessage: String?
     @Published var authGlance: AuthGlance?
     @Published var settingsError: String?
-    @Published private(set) var expandedSectionOverride: NotchSection?
+    @Published private(set) var expandedSectionOverride: NotchSection? {
+        didSet { updateSystemMetricsActivity() }
+    }
     @Published private(set) var focusTakeoverSite: String = ""
     @Published private(set) var focusTakeoverAppName: String = ""
     @Published private(set) var focusTakeoverTargetApp: NSRunningApplication?
@@ -38,6 +45,7 @@ final class AppModel: ObservableObject {
     let todos: TodoStore
     let activity: DeveloperActivityService
     let focusBlocker: FocusBlockerService
+    let systemMetrics: SystemMetricsState
 
     var onPanelConfigurationChanged: (() -> Void)?
     var onVisibilityChanged: ((Bool) -> Void)?
@@ -56,9 +64,19 @@ final class AppModel: ObservableObject {
     private var modeBeforeFileDrop: NotchMode = .compact
     private var modeBeforeFocusTakeover: NotchMode = .compact
     private var isApplyingLoginSetting = false
+    private let systemHistoryURL: URL
+    // Created on first use so the history database is only opened once the
+    // System section or compact System view is actually shown.
+    private var systemCollector: SystemMetricsCollector?
+    private var systemProcessSampler: SystemProcessSampler?
+    private var areSystemMetricsSuspended = false
 
-    init(defaults: UserDefaults = .standard) {
+    init(
+        defaults: UserDefaults = .standard,
+        systemHistoryURL: URL = HistoryStore.defaultDatabaseURL
+    ) {
         self.defaults = defaults
+        self.systemHistoryURL = systemHistoryURL
         settingsStore = SettingsStore(defaults: defaults)
         let loadedSettings = settingsStore.load()
         settings = loadedSettings
@@ -70,6 +88,7 @@ final class AppModel: ObservableObject {
         todos = TodoStore(defaults: defaults)
         activity = DeveloperActivityService()
         focusBlocker = FocusBlockerService()
+        systemMetrics = SystemMetricsState()
         FocusBlockerOverlayController.shared.blockerService = focusBlocker
 
         let didOnboard = defaults.bool(forKey: "virtualNotch.didCompleteOnboarding")
@@ -106,6 +125,7 @@ final class AppModel: ObservableObject {
             }
         setupPowerManagementObservers()
         activity.setRefreshInterval(isExpanded ? 4.0 : 15.0)
+        updateSystemMetricsActivity()
     }
 
     var isExpanded: Bool {
@@ -169,6 +189,16 @@ final class AppModel: ObservableObject {
                         NotchSettings.expandedMinWidth
                     ),
                     height: max(settings.expandedHeight + notchHeightOffset, NotchSettings.codingExpandedHeight)
+                )
+            }
+            if isShowingSystemSection {
+                return NSSize(
+                    width: max(
+                        settings.expandedWidth,
+                        NotchSettings.systemExpandedWidth,
+                        NotchSettings.expandedMinWidth
+                    ),
+                    height: max(settings.expandedHeight, NotchSettings.systemExpandedHeight) + notchHeightOffset
                 )
             }
             return NSSize(
@@ -455,6 +485,62 @@ final class AppModel: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + settings.collapseDelay, execute: work)
     }
 
+    /// Height of the expanded content frame. The System section lays out into its
+    /// taller size; other sections keep the configured expanded height.
+    var expandedContentHeight: CGFloat {
+        if mode == .expanded && isShowingSystemSection {
+            return currentSize.height
+        }
+        return settings.expandedHeight + (settings.isHardwareNotchSafeActive ? 26 : 0)
+    }
+
+    var isCollectingSystemMetrics: Bool {
+        systemCollector?.isRunning ?? false
+    }
+
+    var isSamplingSystemProcesses: Bool {
+        systemProcessSampler?.isRunning ?? false
+    }
+
+    func refreshSystemNetworkProcesses() {
+        systemProcessSampler?.refreshNetworkProcesses()
+    }
+
+    private var isShowingSystemSection: Bool {
+        if expandedSectionOverride != nil {
+            return expandedSectionOverride == .system
+        }
+        return selectedSection == .system
+    }
+
+    /// Collect system metrics only while they are on screen: the expanded System
+    /// section, or the compact notch configured to System. Process sampling (a
+    /// libproc sweep every 1.5s plus `nettop`) is limited to the expanded section.
+    private func updateSystemMetricsActivity() {
+        let canRun = settings.isEnabled && !areSystemMetricsSuspended
+        let showsSection = mode == .expanded && isShowingSystemSection
+        let showsCompact = mode == .compact && settings.resolvedCompactContent == .system
+
+        if canRun && (showsSection || showsCompact) {
+            let collector = systemCollector ?? SystemMetricsCollector(
+                state: systemMetrics,
+                historyStore: HistoryStore(databaseURL: systemHistoryURL)
+            )
+            systemCollector = collector
+            collector.start()
+        } else {
+            systemCollector?.stop()
+        }
+
+        if canRun && showsSection {
+            let sampler = systemProcessSampler ?? SystemProcessSampler(state: systemMetrics)
+            systemProcessSampler = sampler
+            sampler.start()
+        } else {
+            systemProcessSampler?.stop()
+        }
+    }
+
     private var isShowingCodingSection: Bool {
         if expandedSectionOverride != nil {
             return expandedSectionOverride == .activity
@@ -519,10 +605,14 @@ final class AppModel: ObservableObject {
     private func pauseServices() {
         music.pause()
         activity.pause()
+        areSystemMetricsSuspended = true
+        updateSystemMetricsActivity()
     }
 
     private func resumeServices() {
         music.resume()
         activity.resume()
+        areSystemMetricsSuspended = false
+        updateSystemMetricsActivity()
     }
 }

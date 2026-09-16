@@ -81,6 +81,8 @@ struct CompactNotchView: View {
             CompactShelfView(shelf: shelf)
         case .todo:
             CompactTodoView(store: todos, message: model.transientMessage)
+        case .system:
+            CompactSystemView(state: model.systemMetrics)
         }
     }
 

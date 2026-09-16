@@ -206,7 +206,7 @@ struct NotchView: View {
                 ExpandedNotchView(timer: model.timer)
                     .frame(
                         width: notchWidth,
-                        height: model.settings.expandedHeight + (model.settings.isHardwareNotchSafeActive ? 26 : 0),
+                        height: model.expandedContentHeight,
                         alignment: .top
                     )
                     .transition(

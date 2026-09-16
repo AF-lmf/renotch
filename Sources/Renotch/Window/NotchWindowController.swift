@@ -140,12 +140,21 @@ final class NotchWindowController: NSWindowController {
 
     private static func panelSize(for settings: NotchSettings) -> NSSize {
         let notchHeightOffset: CGFloat = settings.isHardwareNotchSafeActive ? 26 : 0
+        // The host panel must cover the largest state, or SwiftUI clips it.
         return NSSize(
-            width: max(max(settings.compactWidth, settings.expandedWidth), NotchSettings.dragWidth)
+            width: max(
+                settings.compactWidth,
+                settings.expandedWidth,
+                NotchSettings.dragWidth,
+                NotchSettings.systemExpandedWidth
+            )
                 + NotchLayout.shadowHorizontalPadding * 2,
             height: max(
-                max(settings.compactHeight, settings.expandedHeight + notchHeightOffset),
-                max(NotchSettings.dragHeight, NotchSettings.codingExpandedHeight)
+                settings.compactHeight,
+                settings.expandedHeight + notchHeightOffset,
+                NotchSettings.dragHeight,
+                NotchSettings.codingExpandedHeight,
+                NotchSettings.systemExpandedHeight + notchHeightOffset
             )
                 + NotchLayout.shadowBottomPadding
         )

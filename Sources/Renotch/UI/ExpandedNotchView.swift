@@ -73,6 +73,11 @@ struct ExpandedNotchView: View {
             FileShelfView(shelf: model.shelf)
         case .todo:
             TodoView(store: model.todos)
+        case .system:
+            SystemMetricsView(
+                state: model.systemMetrics,
+                onRefreshNetwork: model.refreshSystemNetworkProcesses
+            )
         case .welcome:
             WelcomeView()
         }
@@ -98,6 +103,11 @@ struct ExpandedNotchView: View {
                         icon: "chevron.left.forwardslash.chevron.right",
                         isSelected: isSelected(.activity)
                     ) { select(.activity) }
+                    SectionButton(
+                        title: "System",
+                        icon: "cpu",
+                        isSelected: isSelected(.system)
+                    ) { select(.system) }
                     SectionButton(
                         title: "File Shelf",
                         icon: "tray.full.fill",
@@ -170,6 +180,11 @@ struct ExpandedNotchView: View {
                 icon: "chevron.left.forwardslash.chevron.right",
                 isSelected: isSelected(.activity)
             ) { select(.activity) }
+            SectionButton(
+                title: "System",
+                icon: "cpu",
+                isSelected: isSelected(.system)
+            ) { select(.system) }
             SectionButton(
                 title: "File Shelf",
                 icon: "tray.full.fill",

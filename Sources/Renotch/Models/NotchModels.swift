@@ -29,6 +29,7 @@ enum CompactNotchContent: String, Codable, CaseIterable, Identifiable, Sendable 
     case calendar
     case shelf
     case todo
+    case system
 
     var id: String { rawValue }
 
@@ -40,6 +41,7 @@ enum CompactNotchContent: String, Codable, CaseIterable, Identifiable, Sendable 
         case .calendar: return "Calendar"
         case .shelf: return "File Shelf"
         case .todo: return "To-Do List"
+        case .system: return "System"
         }
     }
 
@@ -51,6 +53,7 @@ enum CompactNotchContent: String, Codable, CaseIterable, Identifiable, Sendable 
         case .calendar: return .calendar
         case .shelf: return .shelf
         case .todo: return .todo
+        case .system: return .system
         }
     }
 }
@@ -64,6 +67,7 @@ enum NotchSection: String, CaseIterable, Identifiable, Sendable {
     case calendar
     case shelf
     case todo
+    case system
 
     var id: String { rawValue }
 }
@@ -104,9 +108,12 @@ struct NotchSettings: Codable, Equatable, Sendable {
     static let expandedHeightRange = 180.0...800.0
     static let codingExpandedWidth = 500.0
     static let codingExpandedHeight = 240.0
+    /// Four metric tiles, the power/thermal strip and three process rows.
+    static let systemExpandedWidth = 520.0
+    static let systemExpandedHeight = 244.0
     /// Narrowest width that fits the full expanded header (Dashboard button,
     /// all section tabs with labels, and the close button) without truncation.
-    static let expandedMinWidth = 440.0
+    static let expandedMinWidth = 470.0
     static let dragWidth = 500.0
     static let dragHeight = 120.0
 
