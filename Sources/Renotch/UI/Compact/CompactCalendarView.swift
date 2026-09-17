@@ -48,10 +48,10 @@ struct CompactCalendarView: View {
         let date = nextEvent?.startDate ?? Date()
         let connected = service.accessState == .authorized
         return VStack(spacing: 0) {
-            Text(date.formatted(.dateTime.weekday(.narrow)).uppercased())
+            Text(date.formatted(.dateTime.weekday(.narrow).locale(AppLocale.chinese)).uppercased())
                 .font(.system(size: 6, weight: .bold, design: .monospaced))
                 .foregroundStyle(connected ? Color.notchAccent : Color.notchMuted)
-            Text(date.formatted(.dateTime.day()))
+            Text(String(Calendar.current.component(.day, from: date)))
                 .font(.system(size: 10, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
         }
@@ -68,34 +68,34 @@ struct CompactCalendarView: View {
     private var headline: String {
         switch service.accessState {
         case .authorized:
-            return nextEvent?.title ?? "No upcoming events"
+            return nextEvent?.title ?? "近期没有日程"
         case .notDetermined:
-            return "Connect Apple Calendar"
+            return "连接“日历”"
         case .requesting:
-            return "Connecting…"
+            return "正在连接…"
         case .denied, .restricted:
-            return "Calendar access is off"
+            return "日历访问权限已关闭"
         }
     }
 
     private var subline: String {
         switch service.accessState {
         case .authorized:
-            guard let nextEvent else { return "Nothing in the next 14 days" }
+            guard let nextEvent else { return "未来 14 天没有日程" }
             return "\(nextEvent.dayLabel) · \(nextEvent.calendarTitle)"
         case .notDetermined:
-            return "Tap to grant access"
+            return "点按以授予权限"
         case .requesting:
-            return "Waiting for permission"
+            return "正在等待授权"
         case .denied, .restricted:
-            return "Enable access in System Settings"
+            return "请在“系统设置”中允许访问"
         }
     }
 
     private var accessibilityText: String {
         if let nextEvent {
-            return "Next event: \(nextEvent.title), \(nextEvent.dayLabel) at \(nextEvent.shortTime)"
+            return "下一个日程：\(nextEvent.title)，\(nextEvent.dayLabel) \(nextEvent.shortTime)"
         }
-        return "Calendar: \(headline), \(subline)"
+        return "日历：\(headline)，\(subline)"
     }
 }

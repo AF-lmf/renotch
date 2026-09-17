@@ -35,7 +35,7 @@ struct CompactBrowserMediaView: View {
                     Circle()
                         .fill(media.isPlaying ? Color.red : Color.white.opacity(0.35))
                         .frame(width: 5, height: 5)
-                    Text(media.isPlaying ? media.channel : "Paused · \(media.channel)")
+                    Text(media.isPlaying ? media.channel : "已暂停 · \(media.channel)")
                         .font(.system(size: 8.5, weight: .medium))
                         .foregroundStyle(Color.notchMuted)
                         .lineLimit(1)
@@ -91,7 +91,7 @@ struct CompactBrowserMediaView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("YouTube, \(media.title), \(media.isPlaying ? "playing" : "paused")")
+        .accessibilityLabel("YouTube，\(media.title)，\(media.isPlaying ? "正在播放" : "已暂停")")
     }
 }
 
@@ -131,7 +131,7 @@ struct ExpandedBrowserMediaView: View {
                         Circle()
                             .fill(media.isPlaying ? Color.red : Color.white.opacity(0.35))
                             .frame(width: 4, height: 4)
-                        Text(media.isPlaying ? "Playing" : "Paused")
+                        Text(media.isPlaying ? "正在播放" : "已暂停")
                     }
                     .font(.system(size: 8, weight: .bold))
                     .foregroundStyle(media.isPlaying ? Color.red : Color.notchMuted)
@@ -149,7 +149,7 @@ struct ExpandedBrowserMediaView: View {
                         Button {
                             NSWorkspace.shared.open(pageURL)
                         } label: {
-                            Label("Open video", systemImage: "arrow.up.right")
+                            Label("打开视频", systemImage: "arrow.up.right")
                                 .font(.system(size: 8.5, weight: .semibold))
                         }
                         .buttonStyle(.plain)
@@ -229,7 +229,7 @@ struct CompactBrowserDownloadView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(download.displayName), \(statusText)")
+        .accessibilityLabel("\(download.displayName)，\(statusText)")
     }
 
     private var downloadIndicator: some View {
@@ -264,18 +264,18 @@ struct CompactBrowserDownloadView: View {
 
     private var statusText: String {
         switch download.state {
-        case .complete: return "Download complete"
-        case .interrupted: return "Download interrupted"
+        case .complete: return "下载完成"
+        case .interrupted: return "下载已中断"
         case .inProgress:
-            if download.paused { return "Paused · \(formattedBytes(download.bytesReceived))" }
+            if download.paused { return "已暂停 · \(formattedBytes(download.bytesReceived))" }
             if download.totalBytes > 0 {
-                return "\(formattedBytes(download.bytesReceived)) of \(formattedBytes(download.totalBytes))"
+                return "\(formattedBytes(download.bytesReceived)) / \(formattedBytes(download.totalBytes))"
             }
-            return "Downloading · \(formattedBytes(download.bytesReceived))"
+            return "正在下载 · \(formattedBytes(download.bytesReceived))"
         }
     }
 
     private func formattedBytes(_ value: Int64) -> String {
-        ByteCountFormatter.string(fromByteCount: value, countStyle: .file)
+        value.formatted(.byteCount(style: .file).locale(AppLocale.chinese))
     }
 }

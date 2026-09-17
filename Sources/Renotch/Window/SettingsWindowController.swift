@@ -16,7 +16,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         )
 
         window.minSize = NSSize(width: 760, height: 500)
-        window.title = "Re:notch Settings"
+        window.title = "Re:notch 设置"
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.contentViewController = hostingController

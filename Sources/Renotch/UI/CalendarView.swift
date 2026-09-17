@@ -15,7 +15,7 @@ struct CalendarView: View {
             case .notDetermined:
                 permissionState
             case .requesting:
-                ProgressView("Connecting to Apple Calendar…")
+                ProgressView("正在连接“日历”…")
                     .controlSize(.small)
             case .denied, .restricted:
                 deniedState
@@ -37,9 +37,9 @@ struct CalendarView: View {
     private var permissionState: some View {
         CalendarMessageCard(
             icon: "calendar.badge.plus",
-            title: "Connect Apple Calendar",
-            message: "Show your calendar and events already synced on this Mac.",
-            actionTitle: "Allow Access",
+            title: "连接“日历”",
+            message: "显示已同步到这台 Mac 上的日历和日程。",
+            actionTitle: "允许访问",
             action: service.requestAccess
         )
     }
@@ -47,9 +47,9 @@ struct CalendarView: View {
     private var deniedState: some View {
         CalendarMessageCard(
             icon: "calendar.badge.exclamationmark",
-            title: "Calendar access is off",
-            message: "Enable Calendar access in System Settings to show your dates and events.",
-            actionTitle: "Open Settings",
+            title: "日历访问权限已关闭",
+            message: "请在“系统设置”中允许访问日历，以显示日期和日程。",
+            actionTitle: "打开系统设置",
             action: service.openCalendarPrivacySettings
         )
     }
@@ -94,26 +94,29 @@ struct CalendarView: View {
 
     private var monthHeader: some View {
         HStack(alignment: .firstTextBaseline, spacing: 5) {
-            Text(monthName)
-                .font(.system(size: 13, weight: .bold, design: .rounded))
-                .accessibilityAddTraits(.isHeader)
-            Text(monthYear)
-                .font(.system(size: 10.5, weight: .semibold, design: .rounded))
-                .foregroundStyle(Color.notchMuted)
+            HStack(alignment: .firstTextBaseline, spacing: 1) {
+                Text(monthYear)
+                    .font(.system(size: 10.5, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color.notchMuted)
+                Text(monthName)
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isHeader)
 
             Spacer()
 
-            Button("Today") { showToday() }
+            Button("今天") { showToday() }
                 .font(.system(size: 8.5, weight: .semibold))
                 .buttonStyle(.borderless)
                 .foregroundStyle(Color.notchAccent)
-                .help("Jump to today")
-                .accessibilityLabel("Jump to today")
+                .help("前往今天")
+                .accessibilityLabel("前往今天")
 
-            CalendarIconButton(icon: "chevron.left", label: "Previous month") {
+            CalendarIconButton(icon: "chevron.left", label: "上个月") {
                 changeMonth(by: -1)
             }
-            CalendarIconButton(icon: "chevron.right", label: "Next month") {
+            CalendarIconButton(icon: "chevron.right", label: "下个月") {
                 changeMonth(by: 1)
             }
         }
@@ -121,7 +124,7 @@ struct CalendarView: View {
 
     private var weekdayHeader: some View {
         HStack(spacing: 2) {
-            ForEach(weekdaySymbols, id: \.self) { symbol in
+            ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
                 Text(symbol.uppercased())
                     .font(.system(size: 7.5, weight: .bold, design: .monospaced))
                     .foregroundStyle(Color.notchMuted)
@@ -186,21 +189,22 @@ struct CalendarView: View {
             dateBlock
 
             VStack(alignment: .leading, spacing: 1) {
-                Text(selectedDate.formatted(.dateTime.weekday(.wide)))
+                Text(selectedDate.formatted(.dateTime.weekday(.wide).locale(AppLocale.chinese)))
                     .font(.system(size: 11, weight: .bold, design: .rounded))
                 Text(agendaSubtitle)
-                    .font(.system(size: 8.5, weight: .medium, design: .monospaced))
+                    .font(.system(size: 8.5, weight: .medium))
+                    .monospacedDigit()
                     .foregroundStyle(Color.notchMuted)
                     .lineLimit(1)
             }
 
             Spacer()
 
-            CalendarIconButton(icon: "arrow.clockwise", label: "Refresh events") {
+            CalendarIconButton(icon: "arrow.clockwise", label: "刷新日程") {
                 service.refresh()
                 loadMonthEvents()
             }
-            CalendarIconButton(icon: "arrow.up.right", label: "Open Apple Calendar") {
+            CalendarIconButton(icon: "arrow.up.right", label: "打开“日历”") {
                 service.openCalendar()
             }
         }
@@ -212,11 +216,11 @@ struct CalendarView: View {
     /// over a large day number, mirroring the macOS Calendar date badge.
     private var dateBlock: some View {
         VStack(spacing: 0) {
-            Text(selectedDate.formatted(.dateTime.weekday(.abbreviated)).uppercased())
+            Text(selectedDate.formatted(.dateTime.weekday(.abbreviated).locale(AppLocale.chinese)).uppercased())
                 .font(.system(size: 6.5, weight: .bold, design: .monospaced))
                 .tracking(0.5)
                 .foregroundStyle(Color.notchAccent)
-            Text(selectedDate.formatted(.dateTime.day()))
+            Text(String(calendar.component(.day, from: selectedDate)))
                 .font(.system(size: 15, weight: .bold, design: .rounded))
         }
         .frame(width: 32, height: 32)
@@ -237,10 +241,10 @@ struct CalendarView: View {
                     .font(.system(size: 17, weight: .medium))
                     .foregroundStyle(Color.notchAccent)
             }
-            Text("No events on this day")
+            Text("当天没有日程")
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.85))
-            Text("Nothing scheduled — enjoy the free time.")
+            Text("没有安排，享受空闲时光吧。")
                 .font(.system(size: 8.5, weight: .medium))
                 .foregroundStyle(Color.notchMuted)
         }
@@ -256,22 +260,22 @@ struct CalendarView: View {
     }
 
     private var monthName: String {
-        startOfDisplayedMonth.formatted(.dateTime.month(.wide))
+        startOfDisplayedMonth.formatted(.dateTime.month(.defaultDigits).locale(AppLocale.chinese))
     }
 
     private var monthYear: String {
-        startOfDisplayedMonth.formatted(.dateTime.year())
+        startOfDisplayedMonth.formatted(.dateTime.year().locale(AppLocale.chinese))
     }
 
     private var agendaSubtitle: String {
-        let base = selectedDate.formatted(.dateTime.month(.wide).day())
+        let base = selectedDate.formatted(.dateTime.month(.wide).day().locale(AppLocale.chinese))
         let count = selectedDayEvents.count
         guard count > 0 else { return base }
-        return "\(base) · \(count) event\(count == 1 ? "" : "s")"
+        return "\(base) · \(count) 个日程"
     }
 
     private var weekdaySymbols: [String] {
-        let symbols = calendar.veryShortStandaloneWeekdaySymbols
+        let symbols = AppLocale.chineseCalendar.veryShortStandaloneWeekdaySymbols
         let start = max(0, min(symbols.count - 1, calendar.firstWeekday - 1))
         return Array(symbols[start...] + symbols[..<start])
     }
@@ -356,7 +360,7 @@ private struct CalendarDayButton: View {
                 Circle()
                     .stroke(ringColor, lineWidth: 1)
 
-                Text(date.formatted(.dateTime.day()))
+                Text(String(Calendar.current.component(.day, from: date)))
                     .font(.system(size: 9, weight: isSelected || isToday ? .bold : .medium, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(textColor)
@@ -377,7 +381,7 @@ private struct CalendarDayButton: View {
         .buttonStyle(.plain)
         .onHover { isHovering = $0 }
         .animation(.easeOut(duration: 0.12), value: isHovering)
-        .help(date.formatted(.dateTime.weekday(.wide).month(.wide).day()))
+        .help(date.formatted(.dateTime.weekday(.wide).month(.wide).day().locale(AppLocale.chinese)))
         .accessibilityLabel(accessibilityText)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
@@ -400,12 +404,12 @@ private struct CalendarDayButton: View {
     }
 
     private var accessibilityText: String {
-        var parts = [date.formatted(.dateTime.weekday(.wide).month(.wide).day())]
-        if isToday { parts.append("today") }
+        var parts = [date.formatted(.dateTime.weekday(.wide).month(.wide).day().locale(AppLocale.chinese))]
+        if isToday { parts.append("今天") }
         if hasEvents {
-            parts.append("\(eventCount) event\(eventCount == 1 ? "" : "s")")
+            parts.append("\(eventCount) 个日程")
         }
-        return parts.joined(separator: ", ")
+        return parts.joined(separator: "，")
     }
 }
 
@@ -485,8 +489,8 @@ private struct CalendarAgendaRow: View {
     }
 
     private var accessibilityText: String {
-        let time = event.isAllDay ? "all day" : "at \(event.shortTime)"
-        return "\(event.title), \(event.calendarTitle), \(time)"
+        let time = event.isAllDay ? "全天" : event.shortTime
+        return "\(event.title)，\(event.calendarTitle)，\(time)"
     }
 }
 

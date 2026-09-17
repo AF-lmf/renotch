@@ -42,7 +42,7 @@ struct SmokeTests {
         expect(settings.resolvedCompactContent == .music, "music is the default compact content")
         expect(CompactNotchContent.calendar.section == .calendar, "calendar compact destination")
         expect(CompactNotchContent.todo.section == .todo, "todo compact destination")
-        expect(CompactNotchContent.todo.title == "To-Do List", "todo compact title")
+        expect(CompactNotchContent.todo.title == "待办事项", "todo compact title")
         expect(
             NotchSettings.compactWidthRange == NotchSettings.expandedWidthRange,
             "compact and expanded width ranges match"
@@ -341,7 +341,7 @@ struct SmokeTests {
             id: "docker-summary",
             kind: .docker,
             title: "Docker",
-            subtitle: "1 container running",
+            subtitle: "1 个容器运行中",
             state: .running
         )
         let glanceContainer = DockerContainer(
@@ -358,9 +358,15 @@ struct SmokeTests {
             completions: [],
             id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
         )
-        expect(codingGlance?.title == "Coding active", "combined coding glance title")
-        expect(codingGlance?.subtitle.contains("1 server") == true, "coding glance includes server count")
-        expect(codingGlance?.subtitle.contains("1 Docker container") == true, "coding glance includes Docker count")
+        expect(codingGlance?.title == "开发活动进行中", "combined coding glance title")
+        expect(codingGlance?.subtitle.contains("1 个服务器") == true, "coding glance includes server count")
+        expect(codingGlance?.subtitle.contains("1 个 Docker 容器") == true, "coding glance includes Docker count")
+        expect(DockerStatusText.localized(glanceContainer.status) == "已运行 4 秒", "Docker status text is shown in Chinese")
+        expect(
+            DockerStatusText.localized("Exited (0) 3 hours ago") == "已退出（代码 0）· 3 小时前",
+            "Docker exited status text is shown in Chinese"
+        )
+        expect(DockerStatusText.localized("Paused by operator") == "Paused by operator", "unknown Docker status text stays unchanged")
         expect(
             DeveloperActivityGlanceResolver.resolve(
                 previousActivities: [glanceServer, glanceDocker],
@@ -424,6 +430,19 @@ struct SmokeTests {
         expect(shelf.items.count == 10, "shelf item removal")
         shelf.clear()
         expect(shelf.items.isEmpty, "clear shelf")
+
+        let droppedImageID = UUID()
+        let droppedImageName = ShelfItem.droppedImageFileName(uniqueID: droppedImageID, pathExtension: "png")
+        expect(
+            droppedImageName == "拖入的图像 \(droppedImageID.uuidString).png",
+            "dropped image file name is Chinese"
+        )
+        let droppedImageURL = shelfDirectory.appendingPathComponent(droppedImageName)
+        try Data([0x89, 0x50, 0x4E, 0x47]).write(to: droppedImageURL)
+        expect(
+            ShelfItem.make(from: droppedImageURL).displayName == droppedImageName,
+            "dropped image shelf display name"
+        )
 
         let suite = "VirtualNotchSmokeTests.\(UUID().uuidString)"
         guard let defaults = UserDefaults(suiteName: suite) else {

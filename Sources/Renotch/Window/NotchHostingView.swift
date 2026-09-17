@@ -165,8 +165,7 @@ final class NotchHostingView<Content: View>: NSHostingView<Content> {
             }
 
             let destination = materializedDropDirectory
-                .appendingPathComponent("Dropped Image \(UUID().uuidString)")
-                .appendingPathExtension(fileExtension)
+                .appendingPathComponent(ShelfItem.droppedImageFileName(pathExtension: fileExtension))
             guard (try? data.write(to: destination, options: .atomic)) != nil else {
                 return nil
             }

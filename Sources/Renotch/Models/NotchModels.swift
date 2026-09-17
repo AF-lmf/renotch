@@ -1,5 +1,30 @@
 import Foundation
 
+/// Fixed Simplified Chinese formatting locales for every user-visible date,
+/// time, weekday and byte count. The app ships no .lproj and dev runs are bare
+/// executables, so Foundation would otherwise fall back to English output.
+enum AppLocale {
+    static let chinese = Locale(identifier: "zh_Hans_CN")
+
+    /// Chinese time formatting that keeps the user's 12/24-hour preference
+    /// (15:05 or 下午3:05).
+    static var chineseTime: Locale {
+        let twelveHour = DateFormatter.dateFormat(
+            fromTemplate: "j",
+            options: 0,
+            locale: .autoupdatingCurrent
+        )?.contains("a") ?? false
+        return Locale(identifier: twelveHour ? "zh_Hans_CN@hours=h12" : "zh_Hans_CN@hours=h23")
+    }
+
+    /// The current calendar with Chinese symbols (for example 日一二三四五六).
+    static var chineseCalendar: Calendar {
+        var calendar = Calendar.current
+        calendar.locale = chinese
+        return calendar
+    }
+}
+
 enum NotchMode: String, Codable, Sendable {
     case compact
     case expanded
@@ -16,8 +41,8 @@ enum NotchAppearance: String, Codable, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .black: return "Black"
-        case .liquidGlass: return "Liquid Glass"
+        case .black: return "黑色"
+        case .liquidGlass: return "液态玻璃"
         }
     }
 }
@@ -35,13 +60,13 @@ enum CompactNotchContent: String, Codable, CaseIterable, Identifiable, Sendable 
 
     var title: String {
         switch self {
-        case .music: return "Music"
-        case .servers: return "Servers"
-        case .timer: return "Timer"
-        case .calendar: return "Calendar"
-        case .shelf: return "File Shelf"
-        case .todo: return "To-Do List"
-        case .system: return "System"
+        case .music: return "音乐"
+        case .servers: return "开发活动"
+        case .timer: return "计时器"
+        case .calendar: return "日历"
+        case .shelf: return "文件暂存架"
+        case .todo: return "待办事项"
+        case .system: return "系统状态"
         }
     }
 
@@ -81,17 +106,17 @@ enum HeaderNavigationStyle: String, Codable, CaseIterable, Identifiable, Sendabl
 
     var title: String {
         switch self {
-        case .standard: return "Top Bar"
-        case .belowNotch: return "Below Notch (Safe Area)"
-        case .bottomDock: return "Bottom Dock"
+        case .standard: return "顶部栏"
+        case .belowNotch: return "刘海下方（安全区域）"
+        case .bottomDock: return "底部悬浮栏"
         }
     }
 
     var subtitle: String {
         switch self {
-        case .standard: return "Header placed at top edge"
-        case .belowNotch: return "Pushes header below physical notch clearance"
-        case .bottomDock: return "Tabs in floating dock at bottom"
+        case .standard: return "导航栏位于顶部边缘"
+        case .belowNotch: return "将导航栏下移，避开物理刘海"
+        case .bottomDock: return "导航标签移至底部的悬浮栏"
         }
     }
 }
@@ -392,6 +417,12 @@ struct ShelfItem: Identifiable, Hashable, Sendable {
         FileManager.default.fileExists(atPath: url.path)
     }
 
+    /// File name for image data dropped without a file URL (e.g. from a web page).
+    /// Shown on the shelf, so the prefix follows macOS's Chinese naming for generated files.
+    static func droppedImageFileName(uniqueID: UUID = UUID(), pathExtension: String) -> String {
+        "拖入的图像 \(uniqueID.uuidString).\(pathExtension)"
+    }
+
     static func make(from url: URL) -> ShelfItem {
         let normalizedURL = url.standardizedFileURL
         let values = try? normalizedURL.resourceValues(
@@ -417,8 +448,8 @@ enum PomodoroMode: String, Codable, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .focus: return "Focus"
-        case .breakTime: return "Break"
+        case .focus: return "专注"
+        case .breakTime: return "休息"
         }
     }
 

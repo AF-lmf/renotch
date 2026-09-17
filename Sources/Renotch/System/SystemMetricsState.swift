@@ -11,6 +11,8 @@ import Foundation
 @MainActor
 final class SystemMetricsState: ObservableObject {
     nonisolated static let sparklineCapacity = 60
+    /// `gpuText` when the GPU reader returns nothing; views compare against it.
+    nonisolated static let unavailableText = "不可用"
 
     // CPU
     @Published var cpuUsage: Double = 0
@@ -80,12 +82,12 @@ final class SystemMetricsState: ObservableObject {
         memoryPressure = stats.pressureLevel
         let pressureLabel: String
         switch stats.pressureLevel {
-        case .normal: pressureLabel = "OK"
-        case .warning: pressureLabel = "WARN"
-        case .critical: pressureLabel = "CRIT"
-        case .unknown: pressureLabel = "?"
+        case .normal: pressureLabel = "正常"
+        case .warning: pressureLabel = "警告"
+        case .critical: pressureLabel = "严重"
+        case .unknown: pressureLabel = "未知"
         }
-        memoryText = "\(Int(usedPercent))% (\(pressureLabel))"
+        memoryText = "\(Int(usedPercent))%（\(pressureLabel)）"
     }
 
     func updateNetwork(_ stats: NetworkStats?) {
@@ -109,7 +111,7 @@ final class SystemMetricsState: ObservableObject {
 
     func updateGPU(_ stats: GPUStats?) {
         guard let stats else {
-            gpuText = "N/A"
+            gpuText = Self.unavailableText
             gpuUsage = 0
             return
         }

@@ -184,6 +184,8 @@ struct UpdateCheckerTests {
             var activations = 0
             /// `activations` is the activation count when that alert was presented.
             var alerts: [(title: String, body: String, activations: Int)] = []
+            /// Button titles of each presented alert, in order.
+            var alertButtons: [[String]] = []
             var notified: [String] = []
             var opened: [URL] = []
             var notificationsAllowed = true
@@ -206,6 +208,7 @@ struct UpdateCheckerTests {
             }
             let present: @MainActor (NSAlert) -> NSApplication.ModalResponse = { alert in
                 recorder.alerts.append((alert.messageText, alert.informativeText, recorder.activations))
+                recorder.alertButtons.append(alert.buttons.map(\.title))
                 recorder.onAlert?()
                 return recorder.alertResponse
             }
@@ -255,7 +258,8 @@ struct UpdateCheckerTests {
             let checker = makeChecker(installed: .none, recorder)
             runCheck(checker, interactive: true)
             expect(recorder.fetches == 0, "S1 menu check does not fetch")
-            expect(recorder.alerts.map(\.title) == ["Can't check for updates"], "S1 menu check explains missing version")
+            expect(recorder.alerts.map(\.title) == ["无法检查更新"], "S1 menu check explains missing version")
+            expect(recorder.alertButtons == [["好"]], "S1 alert has an explicit Chinese OK button")
             expect(activatedOncePerAlert(recorder), "S1 menu check activates the app once for its alert")
         }
 
@@ -267,8 +271,9 @@ struct UpdateCheckerTests {
             expect(recorder.alerts.isEmpty && recorder.notified.isEmpty, "S2 launch check is silent")
             expect(recorder.activations == 0, "S2 launch check never activates the app")
             runCheck(checker, interactive: true)
-            expect(recorder.alerts.map(\.title) == ["You're up to date"], "S2 menu check reports up to date")
-            expect(recorder.alerts.first?.body == "Re:notch 1.7.0 is the latest version.", "S2 message")
+            expect(recorder.alerts.map(\.title) == ["已是最新版本"], "S2 menu check reports up to date")
+            expect(recorder.alerts.first?.body == "Re:notch 1.7.0 已是最新版本。", "S2 message")
+            expect(recorder.alertButtons == [["好"]], "S2 alert has an explicit Chinese OK button")
             expect(activatedOncePerAlert(recorder), "S2 menu check activates the app once for its alert")
             expect(defaults.string(forKey: UpdateChecker.lastSurfacedVersionKey) == nil, "S2 persists nothing")
         }
@@ -298,7 +303,8 @@ struct UpdateCheckerTests {
             expect(recorder.activations == 0, "S4 launch check never activates the app")
             expect(checker.availableUpdate != nil, "S4 keeps the passive menu item")
             runCheck(checker, interactive: true)
-            expect(recorder.alerts.map(\.title) == ["Update available"], "S4 menu check still alerts")
+            expect(recorder.alerts.map(\.title) == ["有可用的更新"], "S4 menu check still alerts")
+            expect(recorder.alertButtons == [["下载", "以后"]], "S4 alert offers Download first and Not Now second")
             expect(activatedOncePerAlert(recorder), "S4 menu check activates the app once for its alert")
             expect(recorder.notified.isEmpty, "S4 menu check does not notify")
         }
@@ -333,11 +339,11 @@ struct UpdateCheckerTests {
         scenario("S6 failures") {
             defaults.set("1.9.0", forKey: UpdateChecker.lastSurfacedVersionKey)
             let failureCases: [(String, () throws -> (Data, URLResponse), String)] = [
-                ("offline", { throw URLError(.notConnectedToInternet) }, "Could not reach GitHub. Check your connection and try again."),
-                ("rate limit", { (Data("{\"message\":\"API rate limit exceeded\"}".utf8), response(403)) }, "GitHub is limiting update checks right now. Try again later."),
-                ("server error", { (Data(), response(502)) }, "GitHub returned an unexpected response (HTTP 502). Try again later."),
-                ("malformed", { (Data("not json".utf8), response(200)) }, "GitHub's release information couldn't be read. Try again later."),
-                ("no tag", { (Data("{}".utf8), response(200)) }, "GitHub's release information couldn't be read. Try again later.")
+                ("offline", { throw URLError(.notConnectedToInternet) }, "无法连接到 GitHub。请检查网络连接后重试。"),
+                ("rate limit", { (Data("{\"message\":\"API rate limit exceeded\"}".utf8), response(403)) }, "GitHub 暂时限制了更新检查。请稍后再试。"),
+                ("server error", { (Data(), response(502)) }, "GitHub 返回了意外的响应（HTTP 502）。请稍后再试。"),
+                ("malformed", { (Data("not json".utf8), response(200)) }, "无法读取 GitHub 上的版本发布信息。请稍后再试。"),
+                ("no tag", { (Data("{}".utf8), response(200)) }, "无法读取 GitHub 上的版本发布信息。请稍后再试。")
             ]
             for (name, result, body) in failureCases {
                 let recorder = Recorder()
@@ -348,8 +354,9 @@ struct UpdateCheckerTests {
                 expect(recorder.activations == 0, "S6 \(name) launch check never activates the app")
                 expect(checker.availableUpdate == nil, "S6 \(name) adds no menu item")
                 runCheck(checker, interactive: true)
-                expect(recorder.alerts.map(\.title) == ["Update check failed"], "S6 \(name) menu check alerts")
+                expect(recorder.alerts.map(\.title) == ["检查更新失败"], "S6 \(name) menu check alerts")
                 expect(recorder.alerts.first?.body == body, "S6 \(name) message")
+                expect(recorder.alertButtons == [["好"]], "S6 \(name) alert has an explicit Chinese OK button")
                 expect(activatedOncePerAlert(recorder), "S6 \(name) menu check activates the app once for its alert")
                 expect(defaults.string(forKey: UpdateChecker.lastSurfacedVersionKey) == "1.9.0", "S6 \(name) leaves persistence alone")
             }
@@ -398,7 +405,7 @@ struct UpdateCheckerTests {
             expect(checker.availableUpdate?.version.description == "1.8.0", "failed launch check keeps the available update")
             recorder.fetchResult = { (Data(), response(502)) }
             runCheck(checker, interactive: true)
-            expect(recorder.alerts.map(\.title) == ["Update check failed"], "failed menu check reports the failure")
+            expect(recorder.alerts.map(\.title) == ["检查更新失败"], "failed menu check reports the failure")
             expect(checker.availableUpdate?.version.description == "1.8.0", "failed menu check keeps the available update")
             recorder.fetchResult = release("1.7.0")
             runCheck(checker, interactive: false)
@@ -425,7 +432,7 @@ struct UpdateCheckerTests {
             recorder.fetchGateOpen = true
             expect(waitUntil { !checker.isChecking }, "overlapping checks finish")
             _ = waitUntil(timeout: 0.2) { false }
-            expect(recorder.alerts.map(\.title) == ["Update available"], "overlap shows exactly one alert")
+            expect(recorder.alerts.map(\.title) == ["有可用的更新"], "overlap shows exactly one alert")
             expect(activatedOncePerAlert(recorder), "overlap activates the app once for its one alert")
             expect(recorder.fetches == 1, "overlapping checks share one fetch")
             expect(recorder.notified.isEmpty, "alerted version is not also notified")
@@ -445,7 +452,7 @@ struct UpdateCheckerTests {
             expect(recorder.alerts.isEmpty && recorder.notified.isEmpty && recorder.activations == 0, "launch check with checks off stays silent")
             expect(checker.availableUpdate == nil, "launch check with checks off adds no menu item")
             runCheck(checker, interactive: true)
-            expect(recorder.fetches == 1 && recorder.alerts.map(\.title) == ["Update available"], "menu check still works with launch checks off")
+            expect(recorder.fetches == 1 && recorder.alerts.map(\.title) == ["有可用的更新"], "menu check still works with launch checks off")
 
             defaults.removeObject(forKey: UpdateChecker.lastSurfacedVersionKey)
             let enabledRecorder = Recorder()
@@ -498,7 +505,7 @@ struct UpdateCheckerTests {
 
         func hiddenAlert() -> NSAlert {
             let alert = NSAlert()
-            alert.messageText = "Update available"
+            alert.messageText = "有可用的更新"
             alert.window.alphaValue = 0
             return alert
         }

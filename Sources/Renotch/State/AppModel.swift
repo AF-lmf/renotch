@@ -213,7 +213,7 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func triggerFaceIDGlance(title: String = "Face ID", subtitle: String = "Authenticated", duration: TimeInterval = 2.2) {
+    func triggerFaceIDGlance(title: String = "面容 ID", subtitle: String = "已验证", duration: TimeInterval = 2.2) {
         authGlance = AuthGlance(title: title, subtitle: subtitle, isSuccess: true)
         NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
         onPanelConfigurationChanged?()
@@ -329,7 +329,7 @@ final class AppModel: ObservableObject {
     func showShelf(pin: Bool = false) {
         let removedCount = shelf.removeMissingFiles()
         if removedCount > 0 {
-            showMessage(removedCount == 1 ? "Removed 1 missing file" : "Removed \(removedCount) missing files")
+            showMessage("已移除 \(removedCount) 个找不到的文件")
         }
         guard !shelf.items.isEmpty else {
             collapse(force: true)
@@ -377,9 +377,9 @@ final class AppModel: ObservableObject {
         let result = shelf.add(urls)
         guard result.addedCount > 0 else {
             if result.capacityRejectedCount > 0 || shelf.items.count == shelf.maxItems {
-                showMessage("Shelf is full")
+                showMessage("暂存架已满")
             } else {
-                showMessage("This item cannot be added")
+                showMessage("无法添加此项目")
             }
             restoreModeAfterFileDrop()
             return false
@@ -392,9 +392,9 @@ final class AppModel: ObservableObject {
         mode = .success
         onPanelConfigurationChanged?()
         if result.capacityRejectedCount > 0 {
-            showMessage("Shelf is full")
+            showMessage("暂存架已满")
         } else {
-            showMessage(result.addedCount == 1 ? "Added to shelf" : "Added \(result.addedCount) files")
+            showMessage(result.addedCount == 1 ? "已添加到暂存架" : "已添加 \(result.addedCount) 个文件")
         }
         NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
         scheduleSuccessDismissal()
@@ -424,7 +424,7 @@ final class AppModel: ObservableObject {
     func removeMissingShelfFiles() {
         let removedCount = shelf.removeMissingFiles()
         guard removedCount > 0 else { return }
-        showMessage(removedCount == 1 ? "Removed 1 missing file" : "Removed \(removedCount) missing files")
+        showMessage("已移除 \(removedCount) 个找不到的文件")
         shelfDidChange()
     }
 
@@ -445,7 +445,7 @@ final class AppModel: ObservableObject {
             notify: settings.timerNotificationsEnabled
         )
         isPinned = false
-        showMessage("Focus started · \(fMin)m (Break \(bMin)m next)")
+        showMessage("专注 \(fMin) 分钟 · 随后休息 \(bMin) 分钟")
         collapse(force: true)
     }
 
@@ -453,7 +453,7 @@ final class AppModel: ObservableObject {
         let activeMode = mode ?? timer.selectedMode
         timer.start(minutes: minutes, mode: activeMode, notify: settings.timerNotificationsEnabled)
         isPinned = false
-        showMessage("\(activeMode.title) timer started · \(minutes) min")
+        showMessage("\(activeMode.title)计时已开始 · \(minutes) 分钟")
         collapse(force: true)
     }
 
@@ -570,8 +570,8 @@ final class AppModel: ObservableObject {
             )
         }
         transientMessage = isAutoBreak
-            ? "Focus complete · \(breakMin)m Break started"
-            : (completedMode == .focus ? "Focus complete!" : "Break complete!")
+            ? "专注已完成 · 开始休息 \(breakMin) 分钟"
+            : (completedMode == .focus ? "专注已完成！" : "休息已结束！")
         expand(section: .timer, pin: true, preferSelectedSection: true)
     }
 
@@ -584,7 +584,10 @@ final class AppModel: ObservableObject {
             isApplyingLoginSetting = true
             settings.launchAtLogin = oldValue
             isApplyingLoginSetting = false
-            settingsError = "Launch at login could not be changed: \(error.localizedDescription)"
+            // localizedDescription is English in bare dev runs (no Info.plist); keep the banner
+            // fully Chinese and send the system description to the log instead.
+            NSLog("[LaunchAtLogin] Failed to update login item: %@", String(describing: error))
+            settingsError = "无法更改“登录时打开”设置（错误代码 \((error as NSError).code)）。"
         }
     }
 

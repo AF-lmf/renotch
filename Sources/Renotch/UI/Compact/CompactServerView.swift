@@ -51,6 +51,6 @@ struct CompactServerView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(activity.title), \(activity.subtitle)")
+        .accessibilityLabel("\(activity.title)，\(activity.subtitle)")
     }
 }

@@ -56,8 +56,8 @@ final class NotificationService: NSObject, UNUserNotificationCenterDelegate {
         guard status == .authorized || status == .provisional else { return false }
 
         let content = UNMutableNotificationContent()
-        content.title = "Update Available"
-        content.body = "Re:notch \(version) is available (you have \(installed)). Click to open the download page."
+        content.title = "有可用的更新"
+        content.body = "Re:notch \(version) 现已推出（你当前的版本为 \(installed)）。点按以打开下载页面。"
         content.userInfo = ["releasePage": releasePage.absoluteString]
 
         let request = UNNotificationRequest(identifier: Self.updateNotificationID, content: content, trigger: nil)
@@ -92,13 +92,13 @@ final class NotificationService: NSObject, UNUserNotificationCenterDelegate {
         let content = UNMutableNotificationContent()
         switch mode {
         case .focus:
-            content.title = "Focus Session Finished"
+            content.title = "专注时段已结束"
             content.body = autoAdvance
-                ? "Great work! Starting \(breakMinutes)-minute break now."
-                : "Great work! Time to take a break."
+                ? "干得好！现在开始 \(breakMinutes) 分钟的休息。"
+                : "干得好！该休息一下了。"
         case .breakTime:
-            content.title = "Break Finished"
-            content.body = "Ready to start your next focus session?"
+            content.title = "休息已结束"
+            content.body = "准备好开始下一个专注时段了吗？"
         }
         content.sound = .default
 
@@ -123,13 +123,13 @@ final class NotificationService: NSObject, UNUserNotificationCenterDelegate {
         let content = UNMutableNotificationContent()
         switch mode {
         case .focus:
-            content.title = "Focus Session Finished"
+            content.title = "专注时段已结束"
             content.body = autoAdvance
-                ? "Great work! Starting \(breakMinutes)-minute break now."
-                : "Great work! Time to take a break."
+                ? "干得好！现在开始 \(breakMinutes) 分钟的休息。"
+                : "干得好！该休息一下了。"
         case .breakTime:
-            content.title = "Break Finished"
-            content.body = "Ready to start your next focus session?"
+            content.title = "休息已结束"
+            content.body = "准备好开始下一个专注时段了吗？"
         }
         content.sound = .default
 

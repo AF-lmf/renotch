@@ -19,8 +19,8 @@ struct SystemMetricsView: View {
         var title: String {
             switch self {
             case .cpu: return "CPU"
-            case .memory: return "Memory"
-            case .network: return "Network"
+            case .memory: return "内存"
+            case .network: return "网络"
             }
         }
     }
@@ -39,11 +39,11 @@ struct SystemMetricsView: View {
                     label: "GPU",
                     value: state.gpuText,
                     samples: state.gpuSamples,
-                    tint: percentTint(state.gpuUsage, available: state.gpuText != "N/A" && state.gpuText != "--"),
+                    tint: percentTint(state.gpuUsage, available: state.gpuText != SystemMetricsState.unavailableText && state.gpuText != "--"),
                     range: 0...100
                 )
                 SystemMetricTile(
-                    label: "MEM",
+                    label: "内存",
                     value: state.memoryText == "--" ? "--" : "\(Int(state.memoryUsage))%",
                     detail: memoryPressureLabel,
                     detailTint: SystemMetricTint.memoryPressure(state.memoryPressure),
@@ -52,7 +52,7 @@ struct SystemMetricsView: View {
                     range: 0...100
                 )
                 SystemMetricTile(
-                    label: "NET",
+                    label: "网络",
                     value: state.networkText == "--" ? "--" : "↓\(ByteFormatting.format(state.networkDownloadBps))",
                     detail: state.networkText == "--" ? nil : "↑\(ByteFormatting.format(state.networkUploadBps))",
                     samples: state.networkSamples,
@@ -98,9 +98,9 @@ struct SystemMetricsView: View {
 
     private var memoryPressureLabel: String? {
         switch state.memoryPressure {
-        case .normal: return "OK"
-        case .warning: return "WARN"
-        case .critical: return "CRIT"
+        case .normal: return "正常"
+        case .warning: return "警告"
+        case .critical: return "严重"
         case .unknown, nil: return nil
         }
     }
@@ -124,9 +124,9 @@ struct SystemMetricsView: View {
     private var thermalText: String {
         let temperature = state.thermal.cpuSocTemperatureCelsius.map { "\(Int($0.rounded()))°C" } ?? "--"
         switch state.thermal.systemState {
-        case .fair: return "\(temperature) · Fair"
-        case .serious: return "\(temperature) · Serious"
-        case .critical: return "\(temperature) · Critical"
+        case .fair: return "\(temperature) · 偏高"
+        case .serious: return "\(temperature) · 过高"
+        case .critical: return "\(temperature) · 危急"
         case .nominal, .unknown: return temperature
         }
     }
@@ -139,7 +139,7 @@ struct SystemMetricsView: View {
             return "--"
         case .supported:
             let speeds = state.fan.fans.compactMap(\.currentRPM).map { "\(Int($0.rounded()))" }
-            return speeds.isEmpty ? "--" : speeds.joined(separator: " · ") + " rpm"
+            return speeds.isEmpty ? "--" : speeds.joined(separator: " · ") + " 转/分"
         }
     }
 
@@ -152,7 +152,7 @@ struct SystemMetricsView: View {
     private var processSection: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 4) {
-                Text("TOP PROCESSES")
+                Text("进程排行")
                     .font(.system(size: 8.5, weight: .semibold))
                     .tracking(0.4)
                     .foregroundStyle(Color.notchMuted)
@@ -168,8 +168,8 @@ struct SystemMetricsView: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(state.processesLoading)
-                    .help("Measure network usage again")
-                    .accessibilityLabel("Refresh network usage")
+                    .help("重新测量网络用量")
+                    .accessibilityLabel("刷新网络用量")
                 }
 
                 Spacer(minLength: 6)
@@ -266,10 +266,21 @@ struct SystemMetricsView: View {
         guard processRows.isEmpty else { return nil }
         switch processMode {
         case .cpu, .memory:
-            return state.resourceLoading ? "Sampling processes…" : "No process data"
+            return state.resourceLoading ? "正在采样进程…" : "暂无进程数据"
         case .network:
-            if state.processesLoading { return "Measuring network usage…" }
-            return state.processError ?? "No network activity"
+            if state.processesLoading { return "正在测量网络用量…" }
+            return state.processError.map(Self.processErrorText) ?? "没有网络活动"
+        }
+    }
+
+    /// `ProcessNetworkReader` reports English reasons (kept identical to MacStatus);
+    /// map them here. Anything else is raw nettop stderr.
+    nonisolated static func processErrorText(_ reason: String) -> String {
+        switch reason {
+        case "Unable to start nettop.": return "无法启动 nettop"
+        case "nettop sampling timed out.": return "nettop 采样超时"
+        case "No nettop samples were returned.": return "nettop 未返回采样数据"
+        default: return "nettop 运行出错"
         }
     }
 }
@@ -297,6 +308,7 @@ private struct SystemMetricTile: View {
                         .font(.system(size: 8, weight: .semibold, design: .rounded))
                         .monospacedDigit()
                         .foregroundStyle(detailTint)
+                        .lineLimit(1)
                 }
                 Spacer(minLength: 2)
                 Text(value)
@@ -305,6 +317,7 @@ private struct SystemMetricTile: View {
                     .foregroundStyle(tint == Color.notchMuted ? tint : tintedText)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
+                    .layoutPriority(1)
             }
             SystemSparklineView(samples: samples, color: tint, range: range)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -322,7 +335,7 @@ private struct SystemMetricTile: View {
         )
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(label)
-        .accessibilityValue([value, detail].compactMap { $0 }.joined(separator: ", "))
+        .accessibilityValue([value, detail].compactMap { $0 }.joined(separator: "，"))
     }
 
     private var tintedText: Color {

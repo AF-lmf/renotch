@@ -15,7 +15,7 @@ struct DeveloperActivityView: View {
                 id: "developer-\(selectedKind.rawValue)-idle",
                 kind: selectedKind,
                 title: selectedKind.title,
-                subtitle: "No active \(selectedKind.title.lowercased()) tasks",
+                subtitle: selectedKind.emptySubtitle,
                 state: .idle,
                 detail: selectedKind.emptyDescription
             )
@@ -102,7 +102,7 @@ struct DeveloperActivityView: View {
             }
             .buttonStyle(.plain)
             .disabled(service.isRefreshing)
-            .help("Refresh developer activity")
+            .help("刷新开发活动")
         }
         .animation(.easeOut(duration: 0.18), value: selectedKind)
     }
@@ -155,7 +155,7 @@ struct DeveloperActivityView: View {
 
             HStack(spacing: 8) {
                 ActivityStateDot(state: activity.state)
-                Text(activity.state.compactLabel.capitalized)
+                Text(activity.state.compactLabel)
                     .font(.system(size: 8.5, weight: .semibold))
                     .foregroundStyle(activity.state.tint)
 
@@ -178,18 +178,18 @@ struct DeveloperActivityView: View {
     private func activityActions(_ activity: DeveloperActivity) -> some View {
         HStack(spacing: 6) {
             if activity.url != nil {
-                ActivityIconButton(title: "Open", icon: "arrow.up.right") { service.open(activity) }
-                ActivityIconButton(title: "Copy URL", icon: "doc.on.doc") {
+                ActivityIconButton(title: "打开", icon: "arrow.up.right") { service.open(activity) }
+                ActivityIconButton(title: "拷贝网址", icon: "doc.on.doc") {
                     service.copyPrimaryValue(activity)
-                    model.showMessage("URL copied")
+                    model.showMessage("已拷贝网址")
                 }
             }
             if activity.workingDirectory != nil {
-                ActivityIconButton(title: "Open folder", icon: "folder") { service.revealFolder(activity) }
-                ActivityIconButton(title: "Open terminal", icon: "terminal") { service.openLogs(for: activity) }
+                ActivityIconButton(title: "在访达中显示", icon: "folder") { service.revealFolder(activity) }
+                ActivityIconButton(title: "在终端中打开", icon: "terminal") { service.openLogs(for: activity) }
             }
             if activity.processID != nil {
-                ActivityIconButton(title: "Stop", icon: "stop.fill", tint: .red) { service.stop(activity) }
+                ActivityIconButton(title: "停止", icon: "stop.fill", tint: .red) { service.stop(activity) }
             }
         }
     }
@@ -238,18 +238,18 @@ struct DeveloperActivityView: View {
 
                     HStack(spacing: 5) {
                         if server.url != nil {
-                            ActivityIconButton(title: "Open", icon: "arrow.up.right") { service.open(server) }
-                            ActivityIconButton(title: "Copy URL", icon: "doc.on.doc") {
+                            ActivityIconButton(title: "打开", icon: "arrow.up.right") { service.open(server) }
+                            ActivityIconButton(title: "拷贝网址", icon: "doc.on.doc") {
                                 service.copyPrimaryValue(server)
-                                model.showMessage("URL copied")
+                                model.showMessage("已拷贝网址")
                             }
                         }
                         if server.workingDirectory != nil {
-                            ActivityIconButton(title: "Open folder", icon: "folder") { service.revealFolder(server) }
-                            ActivityIconButton(title: "Open terminal", icon: "terminal") { service.openLogs(for: server) }
+                            ActivityIconButton(title: "在访达中显示", icon: "folder") { service.revealFolder(server) }
+                            ActivityIconButton(title: "在终端中打开", icon: "terminal") { service.openLogs(for: server) }
                         }
                         if server.processID != nil {
-                            ActivityIconButton(title: "Stop", icon: "stop.fill", tint: .red) { service.stop(server) }
+                            ActivityIconButton(title: "停止", icon: "stop.fill", tint: .red) { service.stop(server) }
                         }
                     }
                 }
@@ -273,16 +273,16 @@ struct DeveloperActivityView: View {
                             .font(.system(size: 11, weight: .semibold, design: .monospaced))
                             .lineLimit(1)
                     }
-                    Text(container.status)
+                    Text(DockerStatusText.localized(container.status))
                         .font(.system(size: 9))
                         .foregroundStyle(Color.notchMuted)
                         .lineLimit(1)
                     HStack(spacing: 5) {
-                        ActivityIconButton(title: "Logs", icon: "text.alignleft") {
+                        ActivityIconButton(title: "查看日志", icon: "text.alignleft") {
                             service.openContainerLogs(container)
                         }
                         if container.isRunning {
-                            ActivityIconButton(title: "Stop", icon: "stop.fill", tint: .red) {
+                            ActivityIconButton(title: "停止", icon: "stop.fill", tint: .red) {
                                 service.stopContainer(container)
                             }
                         }
@@ -304,7 +304,7 @@ struct DeveloperActivityView: View {
                         .lineLimit(1)
                     HStack(spacing: 8) {
                         Label(git.branch, systemImage: "arrow.triangle.branch")
-                        Text("\(git.changedFiles) changed")
+                        Text("\(git.changedFiles) 个更改")
                         Text(git.commitSHA)
                     }
                     .font(.system(size: 10, weight: .medium, design: .monospaced))
@@ -316,7 +316,7 @@ struct DeveloperActivityView: View {
 
             HStack(spacing: 6) {
                 if git.ahead == 0, git.behind == 0 {
-                    Text("Up to date")
+                    Text("已是最新")
                         .foregroundStyle(Color.notchMuted)
                 } else {
                     if git.ahead > 0 { Label("\(git.ahead)", systemImage: "arrow.up") }
@@ -325,14 +325,14 @@ struct DeveloperActivityView: View {
 
                 Spacer(minLength: 8)
 
-                ActivityIconButton(title: "Pull", icon: "arrow.down") { service.pullGit() }
-                ActivityIconButton(title: "Push", icon: "arrow.up") { service.pushGit() }
-                ActivityIconButton(title: "Copy SHA", icon: "number") {
+                ActivityIconButton(title: "拉取", icon: "arrow.down") { service.pullGit() }
+                ActivityIconButton(title: "推送", icon: "arrow.up") { service.pushGit() }
+                ActivityIconButton(title: "拷贝提交 SHA", icon: "number") {
                     service.copyCommitSHA()
-                    model.showMessage("Commit SHA copied")
+                    model.showMessage("已拷贝提交 SHA")
                 }
                 if git.remoteURL != nil {
-                    ActivityIconButton(title: "Open remote", icon: "arrow.up.right.square") { service.openGitRemote() }
+                    ActivityIconButton(title: "打开远程仓库", icon: "arrow.up.right.square") { service.openGitRemote() }
                 }
             }
             .font(.system(size: 8.5, weight: .medium, design: .rounded))
@@ -365,14 +365,25 @@ private struct ActivityIconButton: View {
 }
 
 private extension DeveloperActivityKind {
+    var emptySubtitle: String {
+        switch self {
+        case .localhost: return "没有运行中的服务器"
+        case .build: return "没有进行中的构建"
+        case .docker: return "没有 Docker 容器"
+        case .git: return "未检测到 Git 仓库"
+        case .deployment: return "没有进行中的部署"
+        case .terminal: return "没有进行中的任务"
+        }
+    }
+
     var emptyDescription: String {
         switch self {
-        case .localhost: return "Start a development server to see it here."
-        case .build: return "Build commands appear automatically while they run."
-        case .docker: return "Docker containers appear when the daemon is running."
-        case .git: return "Git status follows the active project directory."
-        case .deployment: return "Supported deployment CLIs appear while publishing."
-        case .terminal: return "Long-running package tasks appear here."
+        case .localhost: return "启动开发服务器后，会显示在这里。"
+        case .build: return "构建命令运行时会自动显示在这里。"
+        case .docker: return "Docker 守护进程运行时，容器会显示在这里。"
+        case .git: return "Git 状态跟随当前项目目录。"
+        case .deployment: return "受支持的部署 CLI 在发布时会显示在这里。"
+        case .terminal: return "耗时较长的软件包任务会显示在这里。"
         }
     }
 }

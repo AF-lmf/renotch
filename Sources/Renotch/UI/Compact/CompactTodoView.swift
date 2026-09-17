@@ -86,22 +86,22 @@ struct CompactTodoView: View {
             return top.title
         }
         if store.items.isEmpty {
-            return "No to-dos"
+            return "没有待办事项"
         }
-        return "All tasks completed"
+        return "已全部完成"
     }
 
     private var subline: String {
         if store.items.isEmpty {
-            return "Tap to add your first task"
+            return "点按以添加第一个待办事项"
         }
         if store.remainingCount == 0 {
-            return "\(store.items.count) done today · All clear"
+            return "已完成 \(store.items.count) 项 · 没有剩余"
         }
         if completedCount > 0 {
-            return "\(store.remainingCount) left · \(completedCount) done"
+            return "剩余 \(store.remainingCount) 项 · 已完成 \(completedCount) 项"
         }
-        return "\(store.remainingCount) \(store.remainingCount == 1 ? "task" : "tasks") to do"
+        return "\(store.remainingCount) 项待办"
     }
 
     @ViewBuilder
@@ -117,7 +117,7 @@ struct CompactTodoView: View {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 9, weight: .semibold))
                     .foregroundStyle(Color.notchAccent)
-                Text("Done")
+                Text("已完成")
                     .font(.system(size: 9, weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.notchAccent)
             }
@@ -136,7 +136,7 @@ struct CompactTodoView: View {
                     .contentTransition(.numericText(countsDown: true))
                     .animation(.smooth(duration: 0.25), value: store.remainingCount)
 
-                Text("left")
+                Text("项待办")
                     .font(.system(size: 8.5, weight: .medium))
                     .foregroundStyle(Color.notchMuted)
             }
@@ -151,11 +151,11 @@ struct CompactTodoView: View {
 
     private var accessibilityText: String {
         if store.items.isEmpty {
-            return "To-Do list empty. Tap to add task."
+            return "待办事项为空。点按以添加。"
         }
         if store.remainingCount == 0 {
-            return "All \(store.items.count) tasks completed."
+            return "全部 \(store.items.count) 项待办事项已完成。"
         }
-        return "To-Do: \(headline). \(store.remainingCount) tasks remaining out of \(store.items.count)."
+        return "待办事项：\(headline)。共 \(store.items.count) 项，剩余 \(store.remainingCount) 项。"
     }
 }

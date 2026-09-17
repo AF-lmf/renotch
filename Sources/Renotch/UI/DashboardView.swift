@@ -86,18 +86,18 @@ struct DashboardView: View {
                 // Track title & source
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 4) {
-                        Text("Now Playing")
+                        Text("正在播放")
                             .font(.system(size: 8.5, weight: .semibold))
                             .textCase(.uppercase)
                             .tracking(0.4)
                             .foregroundStyle(Color.notchMuted)
                         Spacer(minLength: 0)
-                        Text(music.isPlaying ? music.activeSource.displayName : "Paused")
+                        Text(music.isPlaying ? music.activeSource.displayName : "已暂停")
                             .font(.system(size: 8, weight: .medium))
                             .foregroundStyle(music.isPlaying ? Color.musicAccent : Color.white.opacity(0.45))
                     }
 
-                    Text(music.track?.title ?? "Nothing playing")
+                    Text(music.track?.title ?? "未在播放")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(Color.white.opacity(0.95))
                         .lineLimit(1)
@@ -126,8 +126,8 @@ struct DashboardView: View {
                             .shadow(color: music.isPlaying ? Color.musicAccent.opacity(0.4) : .clear, radius: 4)
                     }
                     .buttonStyle(AppleSpringPressStyle())
-                    .help(music.isPlaying ? "Pause" : "Play")
-                    .accessibilityLabel(music.isPlaying ? "Pause music" : "Play music")
+                    .help(music.isPlaying ? "暂停" : "播放")
+                    .accessibilityLabel(music.isPlaying ? "暂停音乐" : "播放音乐")
                 }
             }
         }
@@ -164,22 +164,22 @@ struct DashboardView: View {
                 // Time remaining & mode
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 4) {
-                        Text(timer.isActive ? timer.currentMode.title.uppercased() : "FOCUS TIMER")
+                        Text(timer.isActive ? timer.currentMode.title.uppercased() : "专注计时器")
                             .font(.system(size: 8.5, weight: .semibold))
                             .tracking(0.4)
                             .foregroundStyle(timer.isActive ? timer.currentMode.tint : Color.notchMuted)
                         Spacer(minLength: 0)
-                        Text(timer.isPaused ? "Paused" : (timer.isActive ? "Running" : "25m / 5m"))
+                        Text(timer.isPaused ? "已暂停" : (timer.isActive ? "进行中" : "\(timer.focusMinutes) / \(timer.breakMinutes) 分钟"))
                             .font(.system(size: 8, weight: .medium))
                             .foregroundStyle(Color.white.opacity(0.45))
                     }
 
-                    Text(timer.isActive ? TimerService.formatted(timer.remaining) : "Pomodoro")
+                    Text(timer.isActive ? TimerService.formatted(timer.remaining) : "番茄钟")
                         .font(.system(size: 12, weight: .semibold, design: .rounded))
                         .monospacedDigit()
                         .foregroundStyle(timer.isActive ? Color.white : Color.white.opacity(0.85))
 
-                    Text(timer.isActive ? "\(Int(timer.progress * 100))% completed" : "Ready to focus")
+                    Text(timer.isActive ? "已完成 \(Int(timer.progress * 100))%" : "准备开始专注")
                         .font(.system(size: 9, weight: .regular))
                         .foregroundStyle(Color.white.opacity(0.55))
                         .lineLimit(1)
@@ -209,7 +209,7 @@ struct DashboardView: View {
                         .shadow(color: Color.notchAccent.opacity(0.35), radius: 3)
                 }
                 .buttonStyle(AppleSpringPressStyle())
-                .help(timer.isActive ? (timer.isPaused ? "Resume timer" : "Pause timer") : "Start focus session")
+                .help(timer.isActive ? (timer.isPaused ? "继续计时" : "暂停计时") : "开始专注时段")
             }
         }
     }
@@ -239,7 +239,7 @@ struct DashboardView: View {
 
                 VStack(alignment: .leading, spacing: 1.5) {
                     HStack(spacing: 4) {
-                        Text("Coding")
+                        Text("开发活动")
                             .font(.system(size: 10, weight: .semibold))
                             .foregroundStyle(Color.white.opacity(0.9))
                         if isLive {
@@ -250,7 +250,7 @@ struct DashboardView: View {
                         }
                     }
 
-                    Text(isLive ? "\(activity.runningCount) active · \(activity.primaryActivity.title)" : "No active servers")
+                    Text(isLive ? "\(activity.runningCount) 项运行中 · \(activity.primaryActivity.title)" : "没有运行中的服务器")
                         .font(.system(size: 9, weight: .medium))
                         .foregroundStyle(isLive ? Color.notchAccent : Color.notchMuted)
                         .lineLimit(1)
@@ -291,7 +291,7 @@ struct DashboardView: View {
                 .frame(width: 26, height: 26)
 
                 VStack(alignment: .leading, spacing: 1.5) {
-                    Text("Calendar")
+                    Text("日历")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(Color.white.opacity(0.9))
 
@@ -301,7 +301,7 @@ struct DashboardView: View {
                             .foregroundStyle(Color(red: 0.42, green: 0.78, blue: 1.0))
                             .lineLimit(1)
                     } else {
-                        Text(isAuthorized ? "No events today" : "Tap to connect")
+                        Text(isAuthorized ? "近期没有日程" : "点按以连接“日历”")
                             .font(.system(size: 9, weight: .regular))
                             .foregroundStyle(Color.notchMuted)
                             .lineLimit(1)
@@ -344,7 +344,7 @@ struct DashboardView: View {
                         .frame(width: 26, height: 26)
                     }
                     .buttonStyle(AppleSpringPressStyle())
-                    .help("Complete task: \(topTodo.title)")
+                    .help("标记为已完成：\(topTodo.title)")
                 } else {
                     ZStack {
                         RoundedRectangle(cornerRadius: 7, style: .continuous)
@@ -358,7 +358,7 @@ struct DashboardView: View {
 
                 VStack(alignment: .leading, spacing: 1.5) {
                     HStack(spacing: 4) {
-                        Text("Todos")
+                        Text("待办事项")
                             .font(.system(size: 10, weight: .semibold))
                             .foregroundStyle(Color.white.opacity(0.9))
                         if hasRemaining {
@@ -371,7 +371,7 @@ struct DashboardView: View {
                         }
                     }
 
-                    Text(topTodo?.title ?? (todos.items.isEmpty ? "All caught up" : "Completed all tasks"))
+                    Text(topTodo?.title ?? (todos.items.isEmpty ? "没有待办事项" : "已全部完成"))
                         .font(.system(size: 9, weight: .regular))
                         .foregroundStyle(hasRemaining ? Color.white.opacity(0.8) : Color.notchMuted)
                         .lineLimit(1)
@@ -411,11 +411,11 @@ struct DashboardView: View {
                 .frame(width: 26, height: 26)
 
                 VStack(alignment: .leading, spacing: 1.5) {
-                    Text("File Shelf")
+                    Text("文件暂存架")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(Color.white.opacity(0.9))
 
-                    Text(hasFiles ? "\(shelf.items.count) item\(shelf.items.count == 1 ? "" : "s") ready" : "Drop files to pin")
+                    Text(hasFiles ? "\(shelf.items.count) 个项目已就绪" : "拖入文件以暂存")
                         .font(.system(size: 9, weight: .regular))
                         .foregroundStyle(hasFiles ? Color(red: 0.85, green: 0.75, blue: 1.0) : Color.notchMuted)
                         .lineLimit(1)

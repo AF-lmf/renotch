@@ -60,7 +60,17 @@ final class ScreenManager: ObservableObject {
     func refresh() {
         displays = NSScreen.screens.enumerated().compactMap { index, screen in
             guard let id = Self.displayID(for: screen) else { return nil }
-            let name = screen.localizedName.isEmpty ? "Display \(index + 1)" : screen.localizedName
+            // In bare dev runs (no Info.plist) AppKit returns the English system name for the
+            // built-in panel ("Built-in Retina Display"). Label it in Chinese to match Settings;
+            // external monitors report model names (e.g. "S2716Q") that need no translation.
+            let name: String
+            if CGDisplayIsBuiltin(id) != 0 {
+                name = "内建显示器"
+            } else if screen.localizedName.isEmpty {
+                name = "显示器 \(index + 1)"
+            } else {
+                name = screen.localizedName
+            }
             return DisplayOption(id: id, name: name, frame: screen.frame)
         }
     }

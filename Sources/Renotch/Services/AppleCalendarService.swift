@@ -19,14 +19,18 @@ struct CalendarEventItem: Identifiable, Equatable, Sendable {
     let calendarTitle: String
 
     var shortTime: String {
-        if isAllDay { return "ALL DAY" }
-        return startDate.formatted(date: .omitted, time: .shortened)
+        if isAllDay { return "全天" }
+        return startDate.formatted(
+            Date.FormatStyle(date: .omitted, time: .shortened, locale: AppLocale.chineseTime)
+        )
     }
 
     var dayLabel: String {
-        if Calendar.current.isDateInToday(startDate) { return "Today" }
-        if Calendar.current.isDateInTomorrow(startDate) { return "Tomorrow" }
-        return startDate.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+        if Calendar.current.isDateInToday(startDate) { return "今天" }
+        if Calendar.current.isDateInTomorrow(startDate) { return "明天" }
+        return startDate.formatted(
+            .dateTime.weekday(.abbreviated).month(.abbreviated).day().locale(AppLocale.chinese)
+        )
     }
 }
 
@@ -44,11 +48,11 @@ final class AppleCalendarService: ObservableObject {
 
     var compactStatus: String {
         switch accessState {
-        case .notDetermined: return "Tap to connect Apple Calendar"
-        case .requesting: return "Requesting access…"
-        case .denied, .restricted: return "Enable access in System Settings"
+        case .notDetermined: return "点按以连接“日历”"
+        case .requesting: return "正在请求访问权限…"
+        case .denied, .restricted: return "请在“系统设置”中允许访问"
         case .authorized:
-            guard let nextEvent else { return "Nothing in the next 14 days" }
+            guard let nextEvent else { return "未来 14 天没有日程" }
             return "\(nextEvent.dayLabel) · \(nextEvent.shortTime)"
         }
     }
@@ -98,7 +102,7 @@ final class AppleCalendarService: ObservableObject {
                 } else if !granted {
                     // No error but no grant either: the system considers access
                     // denied (e.g. stale TCC entry). Point the user to Settings.
-                    self?.errorMessage = "Calendar access is disabled. Enable it in System Settings."
+                    self?.errorMessage = "日历访问权限已关闭。请在“系统设置”中允许访问。"
                 }
                 self?.refreshAuthorizationState()
                 self?.refresh()
@@ -183,7 +187,7 @@ final class AppleCalendarService: ObservableObject {
         return selected.map { event in
             CalendarEventItem(
                 id: event.eventIdentifier ?? "\(event.title ?? "event")-\(event.startDate.timeIntervalSince1970)",
-                title: event.title?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty ?? "Untitled event",
+                title: event.title?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty ?? "无标题日程",
                 startDate: event.startDate,
                 endDate: event.endDate,
                 isAllDay: event.isAllDay,

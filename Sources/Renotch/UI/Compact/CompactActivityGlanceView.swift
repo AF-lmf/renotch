@@ -34,13 +34,13 @@ struct CompactActivityGlanceView: View {
 
             HStack(spacing: 5) {
                 ActivityStateDot(state: glance.state)
-                Text(glance.state == .success ? "DONE" : "LIVE")
+                Text(glance.state.compactLabel)
                     .font(.system(size: 8, weight: .semibold, design: .rounded))
                     .foregroundStyle(glance.state.tint)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(glance.title), \(glance.subtitle)")
+        .accessibilityLabel("\(glance.title)，\(glance.subtitle)")
     }
 }

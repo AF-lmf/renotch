@@ -64,14 +64,16 @@ private struct NativeHostManifest: Encodable {
     }
 }
 
-private enum BrowserIntegrationError: LocalizedError {
+/// Internal (not private) so AppDelegate can tell these translated errors apart from
+/// English system errors when showing a message in the notch.
+enum BrowserIntegrationError: LocalizedError {
     case missingExecutableDirectory
     case missingBridge
 
     var errorDescription: String? {
         switch self {
-        case .missingExecutableDirectory: return "The application executable directory is unavailable."
-        case .missingBridge: return "The bundled browser bridge is unavailable. Build the packaged app first."
+        case .missingExecutableDirectory: return "找不到 App 的可执行文件目录"
+        case .missingBridge: return "找不到内置的浏览器桥接程序，请先构建 App"
         }
     }
 }

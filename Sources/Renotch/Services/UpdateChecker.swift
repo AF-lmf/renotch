@@ -284,21 +284,24 @@ final class UpdateChecker: ObservableObject {
         let alert = NSAlert()
         switch outcome {
         case .unversionedBuild:
-            alert.messageText = "Can't check for updates"
-            alert.informativeText = "This build of Re:notch has no version number, so it can't be compared with the latest release."
+            alert.messageText = "无法检查更新"
+            alert.informativeText = "此 Re:notch 版本没有版本号，因此无法与最新发布的版本比较。"
+            alert.addButton(withTitle: "好")
         case .upToDate(let installed, let latest):
-            alert.messageText = "You're up to date"
+            alert.messageText = "已是最新版本"
             alert.informativeText = installed == latest
-                ? "Re:notch \(installed) is the latest version."
-                : "Re:notch \(installed) is installed. The latest published release is \(latest)."
+                ? "Re:notch \(installed) 已是最新版本。"
+                : "已安装 Re:notch \(installed)。最新发布的版本为 \(latest)。"
+            alert.addButton(withTitle: "好")
         case .updateAvailable(let update):
-            alert.messageText = "Update available"
-            alert.informativeText = "Re:notch \(update.version) is available (you have \(update.installed)). Download it?"
-            alert.addButton(withTitle: "Download")
-            alert.addButton(withTitle: "Not Now")
+            alert.messageText = "有可用的更新"
+            alert.informativeText = "Re:notch \(update.version) 现已推出（你当前的版本为 \(update.installed)）。要下载吗？"
+            alert.addButton(withTitle: "下载")
+            alert.addButton(withTitle: "以后")
         case .failed(let failure):
-            alert.messageText = "Update check failed"
+            alert.messageText = "检查更新失败"
             alert.informativeText = message(for: failure)
+            alert.addButton(withTitle: "好")
         }
         return alert
     }
@@ -306,13 +309,13 @@ final class UpdateChecker: ObservableObject {
     static func message(for failure: UpdateCheckFailure) -> String {
         switch failure {
         case .unreachable:
-            return "Could not reach GitHub. Check your connection and try again."
+            return "无法连接到 GitHub。请检查网络连接后重试。"
         case .rateLimited:
-            return "GitHub is limiting update checks right now. Try again later."
+            return "GitHub 暂时限制了更新检查。请稍后再试。"
         case .badStatus(let status):
-            return "GitHub returned an unexpected response (HTTP \(status)). Try again later."
+            return "GitHub 返回了意外的响应（HTTP \(status)）。请稍后再试。"
         case .unreadableResponse:
-            return "GitHub's release information couldn't be read. Try again later."
+            return "无法读取 GitHub 上的版本发布信息。请稍后再试。"
         }
     }
 

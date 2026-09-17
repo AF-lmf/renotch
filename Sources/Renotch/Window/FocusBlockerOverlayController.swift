@@ -79,12 +79,12 @@ final class FocusBlockerOverlayController: NSObject, WKScriptMessageHandler {
             // Fallback string HTML if file is missing
             let fallbackHTML = """
             <!DOCTYPE html>
-            <html>
+            <html lang="zh-Hans">
             <head><meta charset="utf-8"><style>body{background:#000;color:#fff;font-family:-apple-system;display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;}</style></head>
             <body>
-            <h1>Deep Work Session</h1>
-            <p>Distraction blocked. Click to close.</p>
-            <button onclick="window.webkit.messageHandlers.focusBlocker.postMessage({action:'closeTab'})" style="padding:10px 20px;font-size:16px;margin-top:20px;border-radius:10px;background:#0A84FF;color:#fff;border:none;">Tutup Tab & Kembali Kerja</button>
+            <h1>深度专注时段</h1>
+            <p>已拦截分心网站。点按以关闭。</p>
+            <button onclick="window.webkit.messageHandlers.focusBlocker.postMessage({action:'closeTab'})" style="padding:10px 20px;font-size:16px;margin-top:20px;border-radius:10px;background:#0A84FF;color:#fff;border:none;">关闭标签页并继续专注</button>
             </body>
             </html>
             """

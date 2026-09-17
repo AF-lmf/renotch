@@ -32,6 +32,11 @@ enum MusicSource: String, CaseIterable, Equatable, Sendable {
 }
 
 struct MusicTrack: Equatable, Sendable {
+    /// Fallbacks the metadata AppleScripts return when a field cannot be read.
+    /// Shared with the artwork search guard so both always match.
+    static let unknownTitle = "未知歌曲"
+    static let unknownArtist = "未知艺人"
+
     let id: String
     let source: MusicSource
     let title: String
@@ -529,9 +534,9 @@ final class MusicService: ObservableObject {
     }
 
     nonisolated private static func searchOnlineArtwork(for track: MusicTrack) async -> NSImage? {
-        guard !track.title.isEmpty, track.title != "Unknown title" else { return nil }
+        guard !track.title.isEmpty, track.title != MusicTrack.unknownTitle else { return nil }
         var query = track.title
-        if !track.artist.isEmpty && track.artist != "Unknown artist" {
+        if !track.artist.isEmpty && track.artist != MusicTrack.unknownArtist {
             query += " \(track.artist)"
         }
         guard let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
@@ -595,12 +600,12 @@ final class MusicService: ObservableObject {
         try
             set trackTitle to (name of activeTrack as text)
         on error
-            set trackTitle to "Unknown title"
+            set trackTitle to "\(MusicTrack.unknownTitle)"
         end try
         try
             set trackArtist to (artist of activeTrack as text)
         on error
-            set trackArtist to "Unknown artist"
+            set trackArtist to "\(MusicTrack.unknownArtist)"
         end try
         try
             set trackAlbum to (album of activeTrack as text)
@@ -642,12 +647,12 @@ final class MusicService: ObservableObject {
         try
             set trackTitle to (name of activeTrack as text)
         on error
-            set trackTitle to "Unknown title"
+            set trackTitle to "\(MusicTrack.unknownTitle)"
         end try
         try
             set trackArtist to (artist of activeTrack as text)
         on error
-            set trackArtist to "Unknown artist"
+            set trackArtist to "\(MusicTrack.unknownArtist)"
         end try
         try
             set trackAlbum to (album of activeTrack as text)

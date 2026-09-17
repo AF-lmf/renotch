@@ -48,11 +48,11 @@ struct MusicPlayerView: View {
                     Circle()
                         .fill(music.isPlaying ? Color.musicAccent : Color.white.opacity(0.28))
                         .frame(width: 5, height: 5)
-                    Text(music.isPlaying ? "Playing" : "Paused")
+                    Text(music.isPlaying ? "正在播放" : "已暂停")
                 }
                 .font(.system(size: 8.5, weight: .semibold))
                 .foregroundStyle(.secondary)
-                .accessibilityLabel("Playback status: \(music.isPlaying ? "playing" : "paused")")
+                .accessibilityLabel("播放状态：\(music.isPlaying ? "正在播放" : "已暂停")")
             }
 
             HStack(spacing: 7) {
@@ -82,7 +82,7 @@ struct MusicPlayerView: View {
                 HStack(spacing: 4) {
                     PlayerControlButton(
                         icon: "shuffle",
-                        title: music.shuffleEnabled ? "Shuffle on" : "Shuffle off",
+                        title: music.shuffleEnabled ? "随机播放：开" : "随机播放：关",
                         size: 27,
                         isActive: music.shuffleEnabled,
                         activeColor: sourceAccent,
@@ -91,7 +91,7 @@ struct MusicPlayerView: View {
 
                     PlayerControlButton(
                         icon: "backward.fill",
-                        title: "Previous",
+                        title: "上一首",
                         size: 27,
                         action: music.previousTrack
                     )
@@ -105,11 +105,11 @@ struct MusicPlayerView: View {
                             .contentShape(Circle())
                     }
                     .buttonStyle(PlayerPressButtonStyle())
-                    .help(music.isPlaying ? "Pause" : "Play")
+                    .help(music.isPlaying ? "暂停" : "播放")
 
                     PlayerControlButton(
                         icon: "forward.fill",
-                        title: "Next",
+                        title: "下一首",
                         size: 27,
                         action: music.nextTrack
                     )
@@ -159,14 +159,14 @@ struct MusicPlayerView: View {
         VStack(alignment: .leading, spacing: 7) {
             Text(
                 music.automationDenied
-                    ? "\(music.activeSource.displayName) access is off"
-                    : "Nothing playing"
+                    ? "\(music.activeSource.displayName) 访问权限已关闭"
+                    : "未在播放"
             )
                 .font(.system(size: 14, weight: .semibold))
             Text(
                 music.automationDenied
-                    ? "Allow Re:notch to control \(music.activeSource.displayName) in System Settings → Privacy & Security → Automation."
-                    : "Play a song in Apple Music or Spotify and its artwork and controls will appear here."
+                    ? "请在“系统设置”→“隐私与安全性”→“自动化”中允许 Re:notch 控制 \(music.activeSource.displayName)。"
+                    : "在 Apple Music 或 Spotify 中播放歌曲后，封面和播放控制将显示在这里。"
             )
             .font(.system(size: 10))
             .foregroundStyle(Color.notchMuted)
@@ -187,7 +187,7 @@ struct MusicPlayerView: View {
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: source == .spotify ? "waveform.circle.fill" : "music.note")
-                Text("Open \(source.displayName)")
+                Text("打开 \(source.displayName)")
             }
             .font(.system(size: 10, weight: .semibold))
             .foregroundStyle(.white)
@@ -221,9 +221,9 @@ struct MusicPlayerView: View {
 
     private var repeatHelp: String {
         switch music.repeatMode {
-        case .off: return "Repeat off"
-        case .all: return "Repeat all"
-        case .one: return "Repeat one"
+        case .off: return "重复：关"
+        case .all: return "重复：全部"
+        case .one: return "重复：单曲"
         }
     }
 
@@ -267,7 +267,7 @@ struct AppleMusicBadge: View {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
             )
-            .accessibilityLabel("Playing from Apple Music")
+            .accessibilityLabel("正在通过 Apple Music 播放")
     }
 }
 
@@ -312,7 +312,7 @@ struct AudioWaveform: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .accessibilityLabel(isPlaying ? "Music playing" : "Music paused")
+        .accessibilityLabel(isPlaying ? "音乐正在播放" : "音乐已暂停")
     }
 
     private func barHeight(_ index: Int, at date: Date) -> CGFloat {

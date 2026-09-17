@@ -28,10 +28,10 @@ final class DeveloperActivityService: ObservableObject {
         recentCompletions.first ?? activities.first ?? DeveloperActivity(
             id: "developer-activity-idle",
             kind: .localhost,
-            title: "Developer activity",
-            subtitle: "No active tasks",
+            title: "开发活动",
+            subtitle: "没有进行中的任务",
             state: .idle,
-            detail: "Start a local server, build, or deployment to see it here."
+            detail: "启动本地服务器、构建或部署后，会显示在这里。"
         )
     }
 
@@ -39,10 +39,10 @@ final class DeveloperActivityService: ObservableObject {
         activities.first(where: { $0.kind == .localhost && $0.state == .running }) ?? DeveloperActivity(
             id: "developer-server-idle",
             kind: .localhost,
-            title: "Servers",
-            subtitle: "No active servers",
+            title: "开发活动",
+            subtitle: "没有运行中的服务器",
             state: .idle,
-            detail: "Start a local development server to see it here."
+            detail: "启动本地开发服务器后，会显示在这里。"
         )
     }
 
@@ -189,7 +189,7 @@ final class DeveloperActivityService: ObservableObject {
                 id: "completed-\(previous.id)-\(Int(Date().timeIntervalSince1970))",
                 kind: previous.kind,
                 title: previous.title,
-                subtitle: "Completed",
+                subtitle: "已完成",
                 state: .success,
                 workingDirectory: previous.workingDirectory,
                 detail: previous.detail
@@ -261,9 +261,9 @@ final class DeveloperActivityService: ObservableObject {
                 id: "docker-summary",
                 kind: .docker,
                 title: "Docker",
-                subtitle: "\(running) container\(running == 1 ? "" : "s") running",
+                subtitle: "\(running) 个容器运行中",
                 state: running > 0 ? .running : .idle,
-                detail: "\(containers.count) total container\(containers.count == 1 ? "" : "s")"
+                detail: "共 \(containers.count) 个容器"
             ))
         }
         if let git {
@@ -271,7 +271,7 @@ final class DeveloperActivityService: ObservableObject {
                 id: "git-\(git.root.path)",
                 kind: .git,
                 title: git.repositoryName,
-                subtitle: git.changedFiles == 0 ? "\(git.branch) · clean" : "\(git.changedFiles) changed · \(git.branch)",
+                subtitle: git.changedFiles == 0 ? "\(git.branch) · 无更改" : "\(git.changedFiles) 个更改 · \(git.branch)",
                 state: git.changedFiles == 0 ? .idle : .running,
                 workingDirectory: git.root,
                 detail: git.commitSHA
@@ -297,7 +297,7 @@ final class DeveloperActivityService: ObservableObject {
         if value.contains("deno") { return "Deno" }
         if value.contains("python") { return "Python" }
         if value.contains("node") { return "Node.js" }
-        return "Local server"
+        return "本地服务器"
     }
 
     nonisolated static func normalizedGitRemote(_ value: String) -> URL? {
@@ -602,7 +602,7 @@ private enum LocalhostMonitor {
                 url: serverURL,
                 faviconData: siteMetadata?.faviconData,
                 workingDirectory: directory,
-                detail: directory?.path ?? "Detected from a local listening port"
+                detail: directory?.path ?? "通过本地监听端口检测到"
             ))
         }
         return Array(results.prefix(12))
@@ -626,10 +626,10 @@ private enum TerminalActivityMonitor {
 
             if matches(value, ["vercel deploy", "netlify deploy", "fly deploy", "wrangler deploy", "firebase deploy", "railway up"]) {
                 kind = .deployment
-                title = "Deployment"
+                title = "部署"
             } else if matches(value, ["swift build", "xcodebuild", "npm run build", "pnpm build", "yarn build", "vite build", "next build", "docker build"]) {
                 kind = .build
-                title = "Build"
+                title = "构建"
             } else if matches(value, ["npm install", "npm i ", "pnpm install", "yarn install", "bun install", "pod install", "bundle install"]) {
                 kind = .terminal
                 title = commandTitle(process.command)
@@ -642,11 +642,11 @@ private enum TerminalActivityMonitor {
                 id: "task-\(process.pid)",
                 kind: kind,
                 title: title,
-                subtitle: "Running · \(process.elapsed)",
+                subtitle: "运行中 · \(process.elapsed)",
                 state: .running,
                 processID: process.pid,
                 workingDirectory: directory,
-                detail: directory?.path ?? "Detected from a running local process"
+                detail: directory?.path ?? "通过正在运行的本地进程检测到"
             )
         }
     }
@@ -696,7 +696,7 @@ private enum GitActivityMonitor {
             let remote = ShellCommand.run("/usr/bin/git", ["-C", root.path, "remote", "get-url", "origin"])
             return GitActivitySnapshot(
                 repositoryName: root.lastPathComponent,
-                branch: branch.isEmpty ? "detached" : branch,
+                branch: branch.isEmpty ? "分离头指针" : branch,
                 changedFiles: status.split(separator: "\n").count,
                 commitSHA: sha,
                 ahead: tracking.first ?? 0,
