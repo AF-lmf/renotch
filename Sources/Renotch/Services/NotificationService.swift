@@ -4,6 +4,7 @@ import UserNotifications
 
 final class NotificationService: NSObject, UNUserNotificationCenterDelegate {
     static let shared = NotificationService()
+    static let updateNotificationID = "virtual-notch-update"
 
     private var center: UNUserNotificationCenter? {
         guard Bundle.main.bundleIdentifier != nil else { return nil }
@@ -28,6 +29,44 @@ final class NotificationService: NSObject, UNUserNotificationCenterDelegate {
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
         completionHandler([.banner, .sound, .badge, .list])
+    }
+
+    // Clicking an update notification opens its release page.
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        let request = response.notification.request
+        if request.identifier == Self.updateNotificationID,
+           response.actionIdentifier == UNNotificationDefaultActionIdentifier,
+           let page = (request.content.userInfo["releasePage"] as? String).flatMap(URL.init(string:)) {
+            DispatchQueue.main.async { NSWorkspace.shared.open(page) }
+        }
+        completionHandler()
+    }
+
+    /// Posts a silent "update available" notification, replacing any earlier
+    /// one. Returns `false` without posting when there is no bundle identifier
+    /// or notifications are not allowed, so the caller only records versions
+    /// the user could have seen.
+    func postUpdateAvailable(version: String, installed: String, releasePage: URL) async -> Bool {
+        guard let center else { return false }
+        let status = await center.notificationSettings().authorizationStatus
+        guard status == .authorized || status == .provisional else { return false }
+
+        let content = UNMutableNotificationContent()
+        content.title = "Update Available"
+        content.body = "Re:notch \(version) is available (you have \(installed)). Click to open the download page."
+        content.userInfo = ["releasePage": releasePage.absoluteString]
+
+        let request = UNNotificationRequest(identifier: Self.updateNotificationID, content: content, trigger: nil)
+        do {
+            try await center.add(request)
+            return true
+        } catch {
+            return false
+        }
     }
 
     func playTimerSound() {

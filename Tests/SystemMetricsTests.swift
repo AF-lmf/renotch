@@ -120,9 +120,9 @@ struct SystemMetricsTests {
             waitUntil(timeout: 3.0) { state.cpuSamples.count > beforeIntervalChange },
             "collector keeps ticking after interval change"
         )
-        // Reproduces the launch update check: NSAlert.runModal spins a modal-panel run
-        // loop inside a main-actor task, so queued main-actor work cannot run until the
-        // alert closes. Metrics on screen must keep updating anyway.
+        // Simulates a modal alert opened from a main-actor job: NSAlert.runModal spins a
+        // modal-panel run loop inside a main-actor task, so queued main-actor work cannot
+        // run until the alert closes. Metrics on screen must keep updating anyway.
         final class ModalProbe {
             var finished = false
             var ticked = false

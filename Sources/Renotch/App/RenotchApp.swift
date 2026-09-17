@@ -9,6 +9,7 @@ struct RenotchApp: App {
         MenuBarExtra {
             MenuBarContent()
                 .environmentObject(appDelegate.model)
+                .environmentObject(appDelegate.updateChecker)
         } label: {
             Image(nsImage: Self.trayIcon)
         }
@@ -42,6 +43,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     static weak var shared: AppDelegate?
 
     let model = AppModel()
+    let updateChecker = UpdateChecker()
     let screenManager = ScreenManager()
     private var notchController: NotchWindowController?
     private var settingsController: SettingsWindowController?
@@ -54,7 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         NotificationService.shared.requestAuthorization()
-        UpdateChecker.check(interactive: false)
+        updateChecker.check(interactive: false)
         _ = try? BrowserIntegrationInstaller.installBundledHost()
         notchController = NotchWindowController(model: model, screenManager: screenManager)
         settingsController = SettingsWindowController(model: model, screenManager: screenManager)
@@ -86,7 +88,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func checkForUpdates() {
-        UpdateChecker.check(interactive: true)
+        updateChecker.check(interactive: true)
     }
 
     func openBrowserIntegration() {
@@ -113,6 +115,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 private struct MenuBarContent: View {
     @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var updates: UpdateChecker
 
     var body: some View {
         Button("Show Notch") { AppDelegate.shared?.showNotch() }
@@ -133,6 +136,9 @@ private struct MenuBarContent: View {
 
         Button("Settings…") { AppDelegate.shared?.openSettings() }
             .keyboardShortcut(",")
+        if let update = updates.availableUpdate {
+            Button("Download Re:notch \(update.version.description)…") { updates.openAvailableUpdate() }
+        }
         Button("Check for Updates…") { AppDelegate.shared?.checkForUpdates() }
         Button("Set Up Browser Activity…") { AppDelegate.shared?.openBrowserIntegration() }
         Button("Restart Notch") { AppDelegate.shared?.restartNotch() }

@@ -28,3 +28,5 @@ swiftc \
 "$SCRIPT_DIR/test-appmodel.sh"
 
 "$SCRIPT_DIR/test-system.sh"
+
+"$SCRIPT_DIR/test-updates.sh"
