@@ -10,6 +10,7 @@ swift build
 swiftc \
     -swift-version 5 \
     Sources/Renotch/Models/NotchModels.swift \
+    Sources/Renotch/Window/ScreenManager.swift \
     Sources/Renotch/Models/BrowserActivityModels.swift \
     Sources/Renotch/Models/DeveloperActivityGlance.swift \
     Sources/Renotch/Services/SettingsStore.swift \

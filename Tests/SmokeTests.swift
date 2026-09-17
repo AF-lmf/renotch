@@ -515,6 +515,31 @@ struct SmokeTests {
         expect(migrated.expandedWidth == 548, "legacy expanded width migration")
         expect(migrated.expandedHeight == 209, "legacy expanded height migration")
 
+        // Default display: the built-in panel first, then the focused screen, then the first screen.
+        expect(
+            ScreenManager.defaultDisplayID(among: [4, 1, 5], focused: 4, isBuiltin: { $0 == 1 }) == 1,
+            "default display prefers the built-in panel over the focused screen"
+        )
+        expect(
+            ScreenManager.defaultDisplayID(among: [4, 5], focused: 5, isBuiltin: { _ in false }) == 5,
+            "default display falls back to the focused screen without a built-in panel"
+        )
+        expect(
+            ScreenManager.defaultDisplayID(among: [4, 5], focused: nil, isBuiltin: { _ in false }) == 4,
+            "default display falls back to the first screen"
+        )
+        expect(
+            ScreenManager.defaultDisplayID(among: [], focused: nil, isBuiltin: { _ in true }) == nil,
+            "no screens means no default display"
+        )
+        let builtinOnline = NSScreen.screens.contains {
+            ScreenManager.displayID(for: $0).map { CGDisplayIsBuiltin($0) != 0 } ?? false
+        }
+        if builtinOnline {
+            let chosen = ScreenManager().screen(for: nil).flatMap(ScreenManager.displayID(for:))
+            expect(chosen.map { CGDisplayIsBuiltin($0) != 0 } ?? false, "default display is the built-in panel on this Mac")
+        }
+
         if failures.isEmpty {
             print("All Re:notch smoke tests passed.")
         } else {

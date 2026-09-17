@@ -297,7 +297,7 @@ struct SettingsView: View {
                         subtitle: "Select display to attach the Re:notch overlay"
                     ) {
                         Picker("", selection: $model.settings.targetDisplayID) {
-                            Text("Main display").tag(nil as UInt32?)
+                            Text("Built-in display first").tag(nil as UInt32?)
                             ForEach(screenManager.displays) { display in
                                 Text(display.name).tag(Optional(display.id))
                             }

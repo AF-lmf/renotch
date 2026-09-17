@@ -33,11 +33,28 @@ final class ScreenManager: ObservableObject {
     }
 
     func screen(for displayID: UInt32?) -> NSScreen? {
+        let screens = NSScreen.screens
         if let displayID,
-           let matching = NSScreen.screens.first(where: { Self.displayID(for: $0) == displayID }) {
+           let matching = screens.first(where: { Self.displayID(for: $0) == displayID }) {
             return matching
         }
-        return NSScreen.main ?? NSScreen.screens.first
+        let preferred = Self.defaultDisplayID(
+            among: screens.compactMap(Self.displayID(for:)),
+            focused: NSScreen.main.flatMap(Self.displayID(for:)),
+            isBuiltin: { CGDisplayIsBuiltin($0) != 0 }
+        )
+        return screens.first { Self.displayID(for: $0) == preferred } ?? NSScreen.main ?? screens.first
+    }
+
+    /// Without a chosen (or connected) display the notch goes to the built-in panel,
+    /// which has the hardware notch. With no built-in display online (a desktop Mac,
+    /// or a closed lid) it uses the screen with keyboard focus, then the first screen.
+    static func defaultDisplayID(
+        among displayIDs: [UInt32],
+        focused: UInt32?,
+        isBuiltin: (UInt32) -> Bool
+    ) -> UInt32? {
+        displayIDs.first(where: isBuiltin) ?? focused ?? displayIDs.first
     }
 
     func refresh() {

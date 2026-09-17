@@ -193,7 +193,7 @@ struct UpdateCheckerTests {
             var onAlert: (() -> Void)?
         }
 
-        func makeChecker(installed: String??, _ recorder: Recorder) -> UpdateChecker {
+        func makeChecker(installed: String??, checksOnLaunch: Bool = UpdateChecker.checksOnLaunch, _ recorder: Recorder) -> UpdateChecker {
             let fetch: @MainActor () async throws -> (Data, URLResponse) = {
                 recorder.fetches += 1
                 while !recorder.fetchGateOpen { try await Task.sleep(nanoseconds: 5_000_000) }
@@ -212,9 +212,9 @@ struct UpdateCheckerTests {
             let activate: @MainActor () -> Void = { recorder.activations += 1 }
             guard let installed else {
                 // Production default: reads CFBundleShortVersionString from this binary.
-                return UpdateChecker(defaults: defaults, fetchLatestRelease: fetch, postNotification: notify, presentAlert: present, activateApp: activate, openURL: { recorder.opened.append($0) })
+                return UpdateChecker(checksOnLaunch: checksOnLaunch, defaults: defaults, fetchLatestRelease: fetch, postNotification: notify, presentAlert: present, activateApp: activate, openURL: { recorder.opened.append($0) })
             }
-            return UpdateChecker(installedVersion: installed, defaults: defaults, fetchLatestRelease: fetch, postNotification: notify, presentAlert: present, activateApp: activate, openURL: { recorder.opened.append($0) })
+            return UpdateChecker(installedVersion: installed, checksOnLaunch: checksOnLaunch, defaults: defaults, fetchLatestRelease: fetch, postNotification: notify, presentAlert: present, activateApp: activate, openURL: { recorder.opened.append($0) })
         }
 
         func release(_ tag: String) -> () throws -> (Data, URLResponse) {
@@ -430,6 +430,30 @@ struct UpdateCheckerTests {
             expect(recorder.fetches == 1, "overlapping checks share one fetch")
             expect(recorder.notified.isEmpty, "alerted version is not also notified")
             expect(defaults.string(forKey: UpdateChecker.lastSurfacedVersionKey) == "1.8.0", "alerted version is persisted")
+        }
+
+        // This fork never checks on launch; the menu check still works.
+        scenario("Launch checks off") {
+            expect(!UpdateChecker.checksOnLaunch, "fork build does not check for updates on launch")
+            defaults.removeObject(forKey: UpdateChecker.lastSurfacedVersionKey)
+            let recorder = Recorder()
+            recorder.fetchResult = release("1.8.0")
+            let checker = makeChecker(installed: "1.7.0", recorder)
+            checker.checkOnLaunch()
+            _ = waitUntil(timeout: 0.3) { false }
+            expect(!checker.isChecking && recorder.fetches == 0, "launch check with checks off does not fetch")
+            expect(recorder.alerts.isEmpty && recorder.notified.isEmpty && recorder.activations == 0, "launch check with checks off stays silent")
+            expect(checker.availableUpdate == nil, "launch check with checks off adds no menu item")
+            runCheck(checker, interactive: true)
+            expect(recorder.fetches == 1 && recorder.alerts.map(\.title) == ["Update available"], "menu check still works with launch checks off")
+
+            defaults.removeObject(forKey: UpdateChecker.lastSurfacedVersionKey)
+            let enabledRecorder = Recorder()
+            enabledRecorder.fetchResult = release("1.8.0")
+            let enabled = makeChecker(installed: "1.7.0", checksOnLaunch: true, enabledRecorder)
+            enabled.checkOnLaunch()
+            expect(waitUntil { !enabled.isChecking && enabledRecorder.fetches == 1 }, "launch check with checks on fetches")
+            expect(enabledRecorder.notified == ["1.8.0"] && enabledRecorder.alerts.isEmpty, "launch check with checks on takes the silent path")
         }
 
         // MARK: Open alert does not stall main-actor work (G4)

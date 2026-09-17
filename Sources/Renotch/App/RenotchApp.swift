@@ -56,7 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         NotificationService.shared.requestAuthorization()
-        updateChecker.check(interactive: false)
+        updateChecker.checkOnLaunch()
         _ = try? BrowserIntegrationInstaller.installBundledHost()
         notchController = NotchWindowController(model: model, screenManager: screenManager)
         settingsController = SettingsWindowController(model: model, screenManager: screenManager)

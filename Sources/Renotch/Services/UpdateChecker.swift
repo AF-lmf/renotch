@@ -138,6 +138,9 @@ enum UpdateCheckOutcome: Equatable {
 final class UpdateChecker: ObservableObject {
     /// Releases come from upstream Re:notch; change the repository only here.
     nonisolated static let repository = "yosaiy/renotch"
+    /// Off in this fork: upstream releases lack the fork's features, so the app
+    /// never checks on launch. "Check for Updates…" still compares on request.
+    nonisolated static let checksOnLaunch = false
     nonisolated static let releasesPage = URL(string: "https://github.com/\(repository)/releases/latest")!
     nonisolated static let latestReleaseAPI = URL(string: "https://api.github.com/repos/\(repository)/releases/latest")!
     nonisolated static let lastSurfacedVersionKey = "virtualNotch.update.lastSurfacedVersion"
@@ -147,6 +150,7 @@ final class UpdateChecker: ObservableObject {
     private(set) var isChecking = false
 
     private let installedVersion: AppVersion?
+    private let checksOnLaunch: Bool
     private let defaults: UserDefaults
     private let fetchLatestRelease: @MainActor () async throws -> (Data, URLResponse)
     private let postNotification: @MainActor (AvailableUpdate) async -> Bool
@@ -161,6 +165,7 @@ final class UpdateChecker: ObservableObject {
 
     init(
         installedVersion: String? = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
+        checksOnLaunch: Bool = UpdateChecker.checksOnLaunch,
         defaults: UserDefaults = .standard,
         fetchLatestRelease: @escaping @MainActor () async throws -> (Data, URLResponse) = UpdateChecker.fetchFromGitHub,
         postNotification: @escaping @MainActor (AvailableUpdate) async -> Bool = { update in
@@ -175,12 +180,19 @@ final class UpdateChecker: ObservableObject {
         openURL: @escaping @MainActor (URL) -> Void = { NSWorkspace.shared.open($0) }
     ) {
         self.installedVersion = installedVersion.flatMap(AppVersion.init)
+        self.checksOnLaunch = checksOnLaunch
         self.defaults = defaults
         self.fetchLatestRelease = fetchLatestRelease
         self.postNotification = postNotification
         self.presentAlert = presentAlert
         self.activateApp = activateApp
         self.openURL = openURL
+    }
+
+    /// The automatic check at app launch; does nothing while launch checks are off.
+    func checkOnLaunch() {
+        guard checksOnLaunch else { return }
+        check(interactive: false)
     }
 
     /// - Parameter interactive: `true` for the menu action (reports every
