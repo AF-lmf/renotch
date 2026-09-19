@@ -176,7 +176,12 @@ struct AIUsageFormattingTests {
             )
             let reading = CodexUsageReading(status: .ok, main: main, additional: [sparkRecent], scannedFiles: 1, scannedBytes: 10)
             let loaded = card(reading)
-            if case .limits(let rows) = loaded.body {
+            if case .limitGroups(let groups) = loaded.body {
+                let rows = groups[0].rows
+                expect(groups.map(\.title), ["常规额度", "5.3 Spark"], "separate bucket labels")
+                expect(groups[1].rows.map(\.id), ["spark.300", "spark.10080"], "spark window ids")
+                expect(groups[1].rows.map(\.usedPercent), [1, 0], "spark independent usage")
+                expect(groups[1].observedAt, sparkRecent.observedAt, "spark keeps its own observation time")
                 expect(rows.map(\.id), ["codex.300", "codex.10080"], "codex rows sorted by length, capped at two")
                 expect(rows.map(\.title), ["5 小时", "每周"], "codex row titles")
                 expect(rows.map(\.usedPercent), [12, 85], "codex row values")
@@ -187,11 +192,19 @@ struct AIUsageFormattingTests {
             expect(loaded.trailing, .age(text: "3 分钟前", tone: .muted), "codex fresh age")
             let help = loaded.help ?? ""
             let helpLines = help.components(separatedBy: "\n")
-            expect(helpLines.first, AIUsageFormatting.updatedAbsoluteText(main.observedAt), "codex help starts with the update time")
-            expectTrue(helpLines.contains("套餐：Pro Lite"), "codex help plan: \(help)")
-            expectTrue(helpLines.contains("GPT-5.3-Codex-Spark（独立限额）：5 小时 已用 1%，每周 已用 0%"), "codex help spark: \(help)")
-            expect(helpLines.last, "只统计这台 Mac 上的 Codex 使用，其他设备的用量会在下次使用后更新。", "codex help ends with the scope note")
-            expectTrue(!help.contains("credit") && !help.contains("额度"), "credits never shown")
+            expectTrue(help.contains("独立额度") && help.contains("本机 Codex 日志"), "source and independent limits explained")
+            expectTrue(helpLines.contains("套餐：Pro Lite"), "plan preserved")
+            expectTrue(!help.contains("credit"), "credits never shown")
+            let mainOnly = card(CodexUsageReading(status: .ok, main: main, additional: [], scannedFiles: 1, scannedBytes: 1))
+            if case .limitGroups(let groups) = mainOnly.body {
+                expect(groups[1].rows.count, 0, "missing Spark is not copied from main")
+                expect(groups[1].emptyText, "暂无本机额度记录", "Spark missing state")
+            } else { failures.append("main-only groups") }
+            let sparkOnly = card(CodexUsageReading(status: .ok, main: nil, additional: [sparkRecent], scannedFiles: 1, scannedBytes: 1))
+            if case .limitGroups(let groups) = sparkOnly.body {
+                expect(groups[0].rows.count, 0, "Spark-only does not impersonate main")
+                expect(groups[1].rows.count, 2, "Spark-only remains visible")
+            } else { failures.append("Spark-only groups") }
 
             var old = sparkRecent
             old = CodexRateLimitSnapshot(limitID: old.limitID, limitName: old.limitName, windows: old.windows, credits: nil,
@@ -201,8 +214,9 @@ struct AIUsageFormattingTests {
                                                planType: nil, reachedType: "primary", observedAt: now.addingTimeInterval(-25 * 3600))
             let stale = card(CodexUsageReading(status: .ok, main: staleMain, additional: [old], scannedFiles: 1, scannedBytes: 1))
             expect(stale.trailing, .age(text: "1 天前", tone: .amber), "codex stale age turns amber")
-            expectTrue(!(stale.help ?? "").contains("Spark") && !(stale.help ?? "").contains("套餐"), "old buckets and missing plans are left out")
-            if case .limits(let rows) = stale.body {
+            expectTrue(!(stale.help ?? "").contains("套餐"), "missing plan is left out")
+            if case .limitGroups(let groups) = stale.body {
+                let rows = groups[0].rows
                 expect(rows.map(\.limitReached), [true, true], "reached type marks the rows")
             } else {
                 failures.append("codex stale body")

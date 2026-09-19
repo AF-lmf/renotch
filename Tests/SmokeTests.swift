@@ -68,12 +68,12 @@ struct SmokeTests {
         expect(NotchSettings.codingExpandedHeight == 240, "coding menu height")
         expect(NotchSettings.expandedMinWidth == 480, "expanded header minimum width")
         expect(NotchSettings.aiUsageExpandedWidth == 520, "AI usage menu width")
-        expect(NotchSettings.aiUsageExpandedHeight == 209, "AI usage menu height")
+        expect(NotchSettings.aiUsageExpandedHeight == 320, "AI usage menu height")
         expect(NotchSettings.bottomDockReservedHeight == 41, "bottom dock reserved height")
-        expect(NotchSettings.default.resolvedAIUsageExpandedHeight == 209, "default AI usage height")
+        expect(NotchSettings.default.resolvedAIUsageExpandedHeight == 320, "default AI usage height")
         var bottomDockSettings = NotchSettings.default
         bottomDockSettings.headerNavigationStyle = .bottomDock
-        expect(bottomDockSettings.resolvedAIUsageExpandedHeight == 250, "AI usage height leaves room for the bottom dock")
+        expect(bottomDockSettings.resolvedAIUsageExpandedHeight == 361, "AI usage height leaves room for the bottom dock")
         expect(NotchSection.allCases.contains(.aiUsage), "AI usage section exists")
         expect(
             !CompactNotchContent.allCases.contains { $0.section == .aiUsage },

@@ -80,8 +80,8 @@ struct AppModelAIUsageTests {
         expect(model.mode == .expanded && model.selectedSection == .aiUsage, "expands to AI 用量")
         expect(model.isCollectingAIUsage, "AI section starts collection")
         expect(!model.isCollectingSystemMetrics && !model.isSamplingSystemProcesses, "AI section leaves system metrics off")
-        expect(model.currentSize == NSSize(width: 548, height: 209), "AI section size (got \(model.currentSize))")
-        expect(model.expandedContentHeight == 209, "AI content height")
+        expect(model.currentSize == NSSize(width: 548, height: 320), "AI section size (got \(model.currentSize))")
+        expect(model.expandedContentHeight == 320, "AI content height")
         expect(aiTestWaitUntil { ai.codex.reading?.main != nil }, "Codex reading arrives")
         expect(ai.codex.reading?.main?.windows.first?.usedPercent == 42, "Codex main 42%")
         expect(aiTestWaitUntil { ai.claude.status == .notInstalled(hasStatusLine: true) }, "Claude Code status checked")
@@ -93,12 +93,12 @@ struct AppModelAIUsageTests {
         // MARK: Sizes
 
         model.settings.headerNavigationStyle = .bottomDock
-        expect(model.currentSize == NSSize(width: 548, height: 250), "bottom dock size (got \(model.currentSize))")
-        expect(model.expandedContentHeight == 250, "bottom dock content height")
+        expect(model.currentSize == NSSize(width: 548, height: 361), "bottom dock size (got \(model.currentSize))")
+        expect(model.expandedContentHeight == 361, "bottom dock content height")
         model.settings.avoidHardwareNotch = true
-        expect(model.currentSize.height == 276, "bottom dock + notch-safe height (got \(model.currentSize.height))")
+        expect(model.currentSize.height == 387, "bottom dock + notch-safe height (got \(model.currentSize.height))")
         model.settings.headerNavigationStyle = .standard
-        expect(model.currentSize.height == 235, "standard + notch-safe height (got \(model.currentSize.height))")
+        expect(model.currentSize.height == 346, "standard + notch-safe height (got \(model.currentSize.height))")
         model.settings.avoidHardwareNotch = false
         model.settings.expandedWidth = 400
         expect(model.currentSize.width == 520, "AI minimum width (got \(model.currentSize.width))")

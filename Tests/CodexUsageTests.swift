@@ -163,15 +163,36 @@ struct CodexUsageTests {
             expect(r.main?.windows.first?.usedPercent == 70 && r.main?.observedAt == date("2026-09-18T08:00:05.000Z"), "edge: main 70% @08:00:05")
             expect(r.additional.isEmpty, "edge: window-0 spark and premium are not shown")
         }
-        do { // stop rule: an older-mtime file is never opened once a newer main event is known
+        do { // Once BOTH buckets are known, older-mtime files can be skipped.
+            let spark = lines(fixture("codex-spark-after-main.jsonl"))[4]
+                .replacingOccurrences(of: "2026-09-17T14:27:55.000Z", with: "2026-09-18T07:24:54.000Z")
+            let both = spark + "\n" + lines(fixture("codex-weekly-only.jsonl")).joined(separator: "\n")
             let home = makeHome("stop", [
-                ("sessions/2026/09/18/rollout-new.jsonl", "codex-weekly-only.jsonl", date("2026-09-18T07:24:58.000Z")),
+                ("sessions/2026/09/18/rollout-new.jsonl", both, date("2026-09-18T07:24:58.000Z")),
                 // inconsistent on purpose: newer events but an older mtime
                 ("sessions/2026/09/17/rollout-old.jsonl", "codex-edge-cases.jsonl", date("2026-09-18T07:00:00.000Z")),
             ])
             let r = CodexRateLimitReader(codexHome: home).read(now: now)
             expect(r.main?.windows.first?.usedPercent == 85, "stop: main from newest file")
             expect(r.scannedFiles == 1, "stop: older file not opened (scanned \(r.scannedFiles))")
+        }
+        do { // A newer main record must not hide Spark history, in either file layout.
+            let main = lines(fixture("codex-weekly-only.jsonl"))[4] + "\n"
+            let spark = lines(fixture("codex-spark-after-main.jsonl"))[4] + "\n"
+            for sameFile in [true, false] {
+                let inputs: [(String, String, Date)] = sameFile
+                    ? [("sessions/rollout-both.jsonl", spark + main, now)]
+                    : [("sessions/rollout-main.jsonl", main, now),
+                       ("sessions/rollout-spark.jsonl", spark, date("2026-09-17T14:28:00.000Z"))]
+                let home = makeHome("spark-older-\(sameFile)", inputs)
+                let reader = CodexRateLimitReader(codexHome: home)
+                let r = reader.read(now: now)
+                expect(r.main?.windows.first?.usedPercent == 85, "older Spark preserves main")
+                expect(r.additional.first?.windows.first?.usedPercent == 1, "older Spark found, same file: \(sameFile)")
+                expect(reader.read(now: now).scannedBytes == 0, "unchanged Spark history not reread")
+                let aged = reader.read(now: now.addingTimeInterval(9 * 86400))
+                expect(aged.main == nil && aged.additional.isEmpty, "cached buckets age out")
+            }
         }
         do { // spark events after main in the same file
             let home = makeHome("spark", [("sessions/2026/09/17/rollout-s.jsonl", "codex-spark-after-main.jsonl", date("2026-09-17T14:28:00.000Z"))])
@@ -265,7 +286,7 @@ struct CodexUsageTests {
             var found: CodexUsageReading?
             for _ in 0..<5 {
                 let next = reader.read(now: now)
-                if next.main != nil { found = next; break }
+                if next.isComplete { found = next; break }
             }
             expect(found?.main?.windows.first?.usedPercent == 60 && found?.isComplete == true, "budget: later refreshes resume and find main")
             var aged = CodexRateLimitReader.Limits()

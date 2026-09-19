@@ -140,7 +140,7 @@ struct NotchSettings: Codable, Equatable, Sendable {
     static let systemExpandedHeight = 244.0
     /// Three equal cards (Codex, Claude Code, DeepSeek), each ~150 pt wide.
     static let aiUsageExpandedWidth = 520.0
-    static let aiUsageExpandedHeight = 209.0
+    static let aiUsageExpandedHeight = 320.0
     /// Height the bottom dock takes from the content: the divider with its 4 pt
     /// vertical padding plus the 26 pt tab inside 3 pt padding.
     static let bottomDockReservedHeight = 41.0

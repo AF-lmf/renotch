@@ -11,9 +11,9 @@ import Foundation
 /// 2. reads only the bytes appended to known files since the last refresh;
 /// 3. spends a bounded byte budget reading unexplored history backwards,
 ///    newest-mtime file first, until each file hits a line older than the
-///    newest "codex" snapshot already known, holds a "codex" snapshot, or
+///    oldest of the latest Codex and Spark snapshots already known, or
 ///    reaches its start.
-/// A file whose mtime is older than the newest known "codex" event cannot hold
+/// A file whose mtime is older than both known bucket snapshots cannot hold
 /// a newer one and is never opened. Not thread-safe: own one per serial queue.
 final class CodexRateLimitReader {
     struct Limits: Sendable {
@@ -49,7 +49,7 @@ final class CodexRateLimitReader {
         var forwardFrom: UInt64
         /// Backward exploration resumes here.
         var backwardFrom: UInt64
-        /// History below `backwardFrom` cannot beat the known "codex" snapshot.
+        /// History below `backwardFrom` cannot beat either displayed bucket snapshot.
         var historyDone: Bool
     }
 
@@ -58,8 +58,14 @@ final class CodexRateLimitReader {
     private let scanner = CodexLogLineScanner()
     private var files: [String: FileState] = [:]
     private var latest: [String: CodexRateLimitSnapshot] = [:]
-    /// Raw canonical timestamp of latest["codex"], for byte-wise comparison.
-    private var mainFloor: String?
+    /// Each displayed bucket needs its own latest record. A recent account-wide
+    /// record must not prevent us finding an older, still-valid Spark record.
+    private var historyFloorTimestamp: String?
+    private var historyFloor: Date? {
+        guard let main = latest[CodexRateLimitSnapshot.mainLimitID],
+              let spark = latest[CodexRateLimitSnapshot.sparkLimitID] else { return nil }
+        return min(main.observedAt, spark.observedAt)
+    }
 
     init(codexHome: URL, limits: Limits = Limits()) {
         self.codexHome = codexHome
@@ -69,10 +75,12 @@ final class CodexRateLimitReader {
     func read(now: Date = Date()) -> CodexUsageReading {
         let roots = ["sessions", "archived_sessions"].map { codexHome.appendingPathComponent($0, isDirectory: true) }
         guard roots.contains(where: { FileManager.default.fileExists(atPath: $0.path) }) else {
-            files.removeAll(); latest.removeAll(); mainFloor = nil
+            files.removeAll(); latest.removeAll(); historyFloorTimestamp = nil
             return CodexUsageReading(status: .codexNotFound, main: nil, additional: [], scannedFiles: 0, scannedBytes: 0)
         }
 
+        latest = latest.filter { now.timeIntervalSince($0.value.observedAt) <= limits.maxAge }
+        historyFloorTimestamp = historyFloor.map(Self.canonical)
         let listed = listLogs(roots: roots, now: now)
         var scannedFiles = Set<String>()
         var scannedBytes = 0
@@ -115,8 +123,8 @@ final class CodexRateLimitReader {
             // New files start at their current end; appended bytes are read forward later.
             var state = known ?? FileState(identity: file.identity, forwardFrom: file.size,
                                            backwardFrom: file.size, historyDone: false)
-            if let main = latest[CodexRateLimitSnapshot.mainLimitID],
-               file.mtime < main.observedAt.addingTimeInterval(-limits.mtimeSlack) {
+            if let floor = historyFloor,
+               file.mtime < floor.addingTimeInterval(-limits.mtimeSlack) {
                 state.historyDone = true // idle since before the newest known event
                 files[file.path] = state
                 continue
@@ -128,12 +136,12 @@ final class CodexRateLimitReader {
             let isNew = known == nil
             var done = false
             let result = scanner.scanBackward(url: file.url, end: state.backwardFrom, byteBudget: budget) { line in
-                let floor = max(mainFloor ?? ageFloor, ageFloor)
+                let floor = max(historyFloorTimestamp ?? ageFloor, ageFloor)
                 if let ts = CodexRateLimitLineParser.canonicalTimestamp(line), ts < floor {
                     done = true
                     return false
                 }
-                if consider(line) == true { done = true; return false }
+                consider(line)
                 return true
             }
             backwardLeft -= result.bytesRead
@@ -158,21 +166,16 @@ final class CodexRateLimitReader {
         )
     }
 
-    /// Parses a candidate line and merges it. Returns true for a windowed
-    /// "codex" snapshot, nil when the line is not a rate-limit event.
-    @discardableResult
-    private func consider(_ line: UnsafeRawBufferPointer) -> Bool? {
+    /// Parses a candidate line and merges it into its own bucket.
+    private func consider(_ line: UnsafeRawBufferPointer) {
         guard CodexRateLimitLineParser.mightContainRateLimits(line),
               let snapshot = CodexRateLimitLineParser.parse(Data(line)),
-              !snapshot.windows.isEmpty else { return nil }
+              !snapshot.windows.isEmpty else { return }
         if let existing = latest[snapshot.limitID], existing.observedAt >= snapshot.observedAt {
-            return snapshot.isMain
+            return
         }
         latest[snapshot.limitID] = snapshot
-        if snapshot.isMain {
-            mainFloor = CodexRateLimitLineParser.canonicalTimestamp(line) ?? Self.canonical(snapshot.observedAt)
-        }
-        return snapshot.isMain
+        historyFloorTimestamp = historyFloor.map(Self.canonical)
     }
 
     private func listLogs(roots: [URL], now: Date) -> [ListedFile] {

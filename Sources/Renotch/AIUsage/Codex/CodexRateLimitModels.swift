@@ -32,6 +32,7 @@ struct CodexRateLimitSnapshot: Equatable, Sendable {
     /// The account-wide Codex bucket. Model-specific buckets use other ids
     /// (seen so far: "codex_bengalfox" = GPT-5.3-Codex-Spark, "premium").
     static let mainLimitID = "codex"
+    static let sparkLimitID = "codex_bengalfox"
 
     let limitID: String
     let limitName: String?
