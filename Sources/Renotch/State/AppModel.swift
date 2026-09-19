@@ -13,22 +13,34 @@ final class AppModel: ObservableObject {
             }
             onPanelConfigurationChanged?()
             updateSystemMetricsActivity()
+            updateAIUsageActivity()
         }
     }
     @Published private(set) var mode: NotchMode {
-        didSet { updateSystemMetricsActivity() }
+        didSet {
+            updateSystemMetricsActivity()
+            updateAIUsageActivity()
+        }
     }
     @Published private(set) var isDraggingFileOver = false
     @Published var selectedSection: NotchSection {
-        didSet { updateSystemMetricsActivity() }
+        didSet {
+            updateSystemMetricsActivity()
+            updateAIUsageActivity()
+        }
     }
     @Published private(set) var isPinned: Bool
     @Published var customTimerMinutes = 30
     @Published var transientMessage: String?
-    @Published var authGlance: AuthGlance?
+    @Published var authGlance: AuthGlance? {
+        didSet { updateAIUsageActivity() }
+    }
     @Published var settingsError: String?
     @Published private(set) var expandedSectionOverride: NotchSection? {
-        didSet { updateSystemMetricsActivity() }
+        didSet {
+            updateSystemMetricsActivity()
+            updateAIUsageActivity()
+        }
     }
     @Published private(set) var focusTakeoverSite: String = ""
     @Published private(set) var focusTakeoverAppName: String = ""
@@ -46,6 +58,7 @@ final class AppModel: ObservableObject {
     let activity: DeveloperActivityService
     let focusBlocker: FocusBlockerService
     let systemMetrics: SystemMetricsState
+    let aiUsage: AIUsageModel
 
     var onPanelConfigurationChanged: (() -> Void)?
     var onVisibilityChanged: ((Bool) -> Void)?
@@ -57,6 +70,7 @@ final class AppModel: ObservableObject {
     private var successWorkItem: DispatchWorkItem?
     private var messageWorkItem: DispatchWorkItem?
     private var browserActivityCancellable: AnyCancellable?
+    private var browserDownloadsCancellable: AnyCancellable?
     private var musicActivityCancellable: AnyCancellable?
     private var timerActivityCancellable: AnyCancellable?
     private var activityGlanceCancellable: AnyCancellable?
@@ -70,10 +84,13 @@ final class AppModel: ObservableObject {
     private var systemCollector: SystemMetricsCollector?
     private var systemProcessSampler: SystemProcessSampler?
     private var areSystemMetricsSuspended = false
+    private var isAIUsageSuspended = false
 
     init(
         defaults: UserDefaults = .standard,
-        systemHistoryURL: URL = HistoryStore.defaultDatabaseURL
+        systemHistoryURL: URL = HistoryStore.defaultDatabaseURL,
+        aiUsageEnvironment: AIUsageEnvironment = .live,
+        activityService: DeveloperActivityService? = nil
     ) {
         self.defaults = defaults
         self.systemHistoryURL = systemHistoryURL
@@ -86,9 +103,11 @@ final class AppModel: ObservableObject {
         calendar = AppleCalendarService()
         shelf = ShelfStore()
         todos = TodoStore(defaults: defaults)
-        activity = DeveloperActivityService()
+        activity = activityService ?? DeveloperActivityService()
         focusBlocker = FocusBlockerService()
         systemMetrics = SystemMetricsState()
+        // Constructing the monitors reads nothing; they start with the AI 用量 section.
+        aiUsage = AIUsageModel(environment: aiUsageEnvironment)
         FocusBlockerOverlayController.shared.blockerService = focusBlocker
 
         let didOnboard = defaults.bool(forKey: "virtualNotch.didCompleteOnboarding")
@@ -106,6 +125,13 @@ final class AppModel: ObservableObject {
         browserActivityCancellable = browser.objectWillChange.sink { [weak self] _ in
             self?.objectWillChange.send()
         }
+        browserDownloadsCancellable = browser.$downloads
+            .dropFirst()
+            .sink { [weak self] _ in
+                // @Published emits before the stored value changes. Resolve the
+                // presentation on the next main-loop turn, after the mutation.
+                DispatchQueue.main.async { self?.updateAIUsageActivity() }
+            }
         musicActivityCancellable = music.objectWillChange.sink { [weak self] _ in
             self?.objectWillChange.send()
         }
@@ -121,11 +147,13 @@ final class AppModel: ObservableObject {
                 DispatchQueue.main.async {
                     self?.objectWillChange.send()
                     self?.onPanelConfigurationChanged?()
+                    self?.updateAIUsageActivity()
                 }
             }
         setupPowerManagementObservers()
         activity.setRefreshInterval(isExpanded ? 4.0 : 15.0)
         updateSystemMetricsActivity()
+        updateAIUsageActivity()
     }
 
     var isExpanded: Bool {
@@ -148,6 +176,18 @@ final class AppModel: ObservableObject {
             browserActivation: browser.playbackActivationDate,
             musicIsPlaying: music.isPlaying,
             musicActivation: music.playbackActivationDate
+        )
+    }
+
+    /// Shared with the view so collection and presentation use the same priority.
+    var compactPresentation: AdaptiveCompactPresentation {
+        AdaptiveCompactArbitrator.resolve(
+            authGlance: authGlance,
+            downloadAvailable: browser.activeDownload != nil,
+            codingGlanceAvailable: activity.glance != nil,
+            mediaSource: activeMediaSource,
+            configuredContent: settings.resolvedCompactContent,
+            isTimerActive: timer.isActive
         )
     }
 
@@ -199,6 +239,16 @@ final class AppModel: ObservableObject {
                         NotchSettings.expandedMinWidth
                     ),
                     height: max(settings.expandedHeight, NotchSettings.systemExpandedHeight) + notchHeightOffset
+                )
+            }
+            if isShowingAIUsageSection {
+                return NSSize(
+                    width: max(
+                        settings.expandedWidth,
+                        NotchSettings.aiUsageExpandedWidth,
+                        NotchSettings.expandedMinWidth
+                    ),
+                    height: max(settings.expandedHeight, settings.resolvedAIUsageExpandedHeight) + notchHeightOffset
                 )
             }
             return NSSize(
@@ -485,10 +535,10 @@ final class AppModel: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + settings.collapseDelay, execute: work)
     }
 
-    /// Height of the expanded content frame. The System section lays out into its
-    /// taller size; other sections keep the configured expanded height.
+    /// Height of the expanded content frame. The System and AI 用量 sections lay
+    /// out into their own minimum sizes; other sections keep the configured height.
     var expandedContentHeight: CGFloat {
-        if mode == .expanded && isShowingSystemSection {
+        if mode == .expanded && (isShowingSystemSection || isShowingAIUsageSection) {
             return currentSize.height
         }
         return settings.expandedHeight + (settings.isHardwareNotchSafeActive ? 26 : 0)
@@ -539,6 +589,35 @@ final class AppModel: ObservableObject {
         } else {
             systemProcessSampler?.stop()
         }
+    }
+
+    var isCollectingAIUsage: Bool {
+        aiUsage.isActive
+    }
+
+    private var isShowingAIUsageSection: Bool {
+        if expandedSectionOverride != nil {
+            return expandedSectionOverride == .aiUsage
+        }
+        return selectedSection == .aiUsage
+    }
+
+    /// Codex logs, the Claude Code snapshot and the DeepSeek balance are read only
+    /// while they are on screen (notch enabled, Mac awake): the expanded AI 用量
+    /// section needs all three, the collapsed 系统状态 content shows Codex 限额 and
+    /// DeepSeek 余额 beside the system metrics.
+    private func updateAIUsageActivity() {
+        aiUsage.setScope(resolvedAIUsageScope)
+    }
+
+    private var resolvedAIUsageScope: AIUsageModel.Scope {
+        guard settings.isEnabled, !isAIUsageSuspended else { return .hidden }
+        if mode == .expanded && isShowingAIUsageSection { return .full }
+        if mode == .compact,
+           settings.resolvedCompactContent == .system,
+           settings.compactSystemShowsAIUsage,
+           compactPresentation == .configured { return .compact }
+        return .hidden
     }
 
     private var isShowingCodingSection: Bool {
@@ -610,6 +689,8 @@ final class AppModel: ObservableObject {
         activity.pause()
         areSystemMetricsSuspended = true
         updateSystemMetricsActivity()
+        isAIUsageSuspended = true
+        updateAIUsageActivity()
     }
 
     private func resumeServices() {
@@ -617,5 +698,7 @@ final class AppModel: ObservableObject {
         activity.resume()
         areSystemMetricsSuspended = false
         updateSystemMetricsActivity()
+        isAIUsageSuspended = false
+        updateAIUsageActivity()
     }
 }

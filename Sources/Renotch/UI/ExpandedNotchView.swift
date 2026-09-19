@@ -4,6 +4,25 @@ struct ExpandedNotchView: View {
     @EnvironmentObject private var model: AppModel
     @ObservedObject var timer: TimerService
 
+    private struct SectionTab: Identifiable {
+        let section: NotchSection
+        let title: String
+        let icon: String
+        var id: NotchSection { section }
+    }
+
+    /// One table for the header tabs and the bottom dock.
+    private static let sectionTabs: [SectionTab] = [
+        SectionTab(section: .music, title: "音乐", icon: "waveform"),
+        SectionTab(section: .activity, title: "开发活动", icon: "chevron.left.forwardslash.chevron.right"),
+        SectionTab(section: .system, title: "系统状态", icon: "cpu"),
+        SectionTab(section: .aiUsage, title: "AI 用量", icon: "chart.bar.fill"),
+        SectionTab(section: .shelf, title: "文件暂存架", icon: "tray.full.fill"),
+        SectionTab(section: .timer, title: "计时器", icon: "timer"),
+        SectionTab(section: .todo, title: "待办事项", icon: "checklist"),
+        SectionTab(section: .calendar, title: "日历", icon: "calendar"),
+    ]
+
     var body: some View {
         VStack(spacing: 0) {
             if model.selectedSection == .welcome {
@@ -78,6 +97,22 @@ struct ExpandedNotchView: View {
                 state: model.systemMetrics,
                 onRefreshNetwork: model.refreshSystemNetworkProcesses
             )
+        case .aiUsage:
+            AIUsageView(
+                aiUsage: model.aiUsage,
+                onOpenSettings: {
+                    model.collapse(force: true)
+                    AppDelegate.shared?.openSettings(tab: .aiUsage)
+                },
+                onAuthorizeDeepSeek: {
+                    // Keep the notch open while the system dialog is up.
+                    model.expand(section: .aiUsage, pin: true, preferSelectedSection: true)
+                    model.aiUsage.deepSeek.authorizeKeychainAccess()
+                },
+                onRefreshDeepSeek: {
+                    model.aiUsage.deepSeek.refreshManually()
+                }
+            )
         case .welcome:
             WelcomeView()
         }
@@ -93,41 +128,7 @@ struct ExpandedNotchView: View {
 
             if model.settings.resolvedHeaderNavigationStyle != .bottomDock {
                 HStack(spacing: 2) {
-                    SectionButton(
-                        title: "音乐",
-                        icon: "waveform",
-                        isSelected: isSelected(.music)
-                    ) { select(.music) }
-                    SectionButton(
-                        title: "开发活动",
-                        icon: "chevron.left.forwardslash.chevron.right",
-                        isSelected: isSelected(.activity)
-                    ) { select(.activity) }
-                    SectionButton(
-                        title: "系统状态",
-                        icon: "cpu",
-                        isSelected: isSelected(.system)
-                    ) { select(.system) }
-                    SectionButton(
-                        title: "文件暂存架",
-                        icon: "tray.full.fill",
-                        isSelected: isSelected(.shelf)
-                    ) { select(.shelf) }
-                    SectionButton(
-                        title: "计时器",
-                        icon: "timer",
-                        isSelected: isSelected(.timer)
-                    ) { select(.timer) }
-                    SectionButton(
-                        title: "待办事项",
-                        icon: "checklist",
-                        isSelected: isSelected(.todo)
-                    ) { select(.todo) }
-                    SectionButton(
-                        title: "日历",
-                        icon: "calendar",
-                        isSelected: isSelected(.calendar)
-                    ) { select(.calendar) }
+                    sectionButtons
                 }
             }
 
@@ -168,43 +169,19 @@ struct ExpandedNotchView: View {
         }
     }
 
+    private var sectionButtons: some View {
+        ForEach(Self.sectionTabs) { tab in
+            SectionButton(
+                title: tab.title,
+                icon: tab.icon,
+                isSelected: isSelected(tab.section)
+            ) { select(tab.section) }
+        }
+    }
+
     private var bottomDockView: some View {
         HStack(spacing: 3) {
-            SectionButton(
-                title: "音乐",
-                icon: "waveform",
-                isSelected: isSelected(.music)
-            ) { select(.music) }
-            SectionButton(
-                title: "开发活动",
-                icon: "chevron.left.forwardslash.chevron.right",
-                isSelected: isSelected(.activity)
-            ) { select(.activity) }
-            SectionButton(
-                title: "系统状态",
-                icon: "cpu",
-                isSelected: isSelected(.system)
-            ) { select(.system) }
-            SectionButton(
-                title: "文件暂存架",
-                icon: "tray.full.fill",
-                isSelected: isSelected(.shelf)
-            ) { select(.shelf) }
-            SectionButton(
-                title: "计时器",
-                icon: "timer",
-                isSelected: isSelected(.timer)
-            ) { select(.timer) }
-            SectionButton(
-                title: "待办事项",
-                icon: "checklist",
-                isSelected: isSelected(.todo)
-            ) { select(.todo) }
-            SectionButton(
-                title: "日历",
-                icon: "calendar",
-                isSelected: isSelected(.calendar)
-            ) { select(.calendar) }
+            sectionButtons
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 3)

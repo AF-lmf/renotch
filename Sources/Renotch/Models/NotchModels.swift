@@ -1,4 +1,5 @@
 import Foundation
+import UniformTypeIdentifiers
 
 /// Fixed Simplified Chinese formatting locales for every user-visible date,
 /// time, weekday and byte count. The app ships no .lproj and dev runs are bare
@@ -93,6 +94,7 @@ enum NotchSection: String, CaseIterable, Identifiable, Sendable {
     case shelf
     case todo
     case system
+    case aiUsage
 
     var id: String { rawValue }
 }
@@ -136,9 +138,16 @@ struct NotchSettings: Codable, Equatable, Sendable {
     /// Four metric tiles, the power/thermal strip and three process rows.
     static let systemExpandedWidth = 520.0
     static let systemExpandedHeight = 244.0
+    /// Three equal cards (Codex, Claude Code, DeepSeek), each ~150 pt wide.
+    static let aiUsageExpandedWidth = 520.0
+    static let aiUsageExpandedHeight = 209.0
+    /// Height the bottom dock takes from the content: the divider with its 4 pt
+    /// vertical padding plus the 26 pt tab inside 3 pt padding.
+    static let bottomDockReservedHeight = 41.0
     /// Narrowest width that fits the full expanded header (Dashboard button,
-    /// all section tabs with labels, and the close button) without truncation.
-    static let expandedMinWidth = 470.0
+    /// all eight section tabs with the selected label, and the close button)
+    /// without truncation.
+    static let expandedMinWidth = 480.0
     static let dragWidth = 500.0
     static let dragHeight = 120.0
 
@@ -196,6 +205,12 @@ struct NotchSettings: Codable, Equatable, Sendable {
 
     static let `default` = NotchSettings()
 
+    /// At narrow widths keep the system readings legible; AI details remain in
+    /// the expanded section. Shared by the compact view and monitor lifecycle.
+    var compactSystemShowsAIUsage: Bool {
+        compactWidth - resolvedCompactContentLeadingPadding - resolvedCompactContentTrailingPadding >= 240
+    }
+
     var resolvedAppearance: NotchAppearance {
         notchAppearance ?? .black
     }
@@ -242,6 +257,13 @@ struct NotchSettings: Codable, Equatable, Sendable {
 
     var isHardwareNotchSafeActive: Bool {
         resolvedAvoidHardwareNotch || resolvedHeaderNavigationStyle == .belowNotch
+    }
+
+    /// Minimum AI 用量 height before the hardware-notch offset. The bottom dock
+    /// sits inside the expanded frame, so it would otherwise squeeze the cards.
+    var resolvedAIUsageExpandedHeight: Double {
+        Self.aiUsageExpandedHeight
+            + (resolvedHeaderNavigationStyle == .bottomDock ? Self.bottomDockReservedHeight : 0)
     }
 
     var resolvedExpandedContentLeadingPadding: Double {

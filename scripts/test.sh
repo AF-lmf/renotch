@@ -31,3 +31,5 @@ swiftc \
 "$SCRIPT_DIR/test-system.sh"
 
 "$SCRIPT_DIR/test-updates.sh"
+
+"$SCRIPT_DIR/test-ai-usage.sh"

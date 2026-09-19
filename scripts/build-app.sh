@@ -33,14 +33,18 @@ if [ -z "$SIGN_IDENTITY" ]; then
 fi
 
 cd "$PROJECT_DIR"
-# Build for Apple Silicon (arm64) and Intel (x86_64)
-swift build -c "$BUILD_CONFIGURATION" --triple arm64-apple-macosx --product Renotch
-swift build -c "$BUILD_CONFIGURATION" --triple arm64-apple-macosx --product RenotchBrowserBridge
-swift build -c "$BUILD_CONFIGURATION" --triple x86_64-apple-macosx --product Renotch
-swift build -c "$BUILD_CONFIGURATION" --triple x86_64-apple-macosx --product RenotchBrowserBridge
+# Keep each architecture in its own scratch directory. Newer SwiftPM build
+# systems can otherwise put both triples in .build/out/Products/Release, letting
+# the second build overwrite the first before lipo reads it.
+ARM_SCRATCH="$PROJECT_DIR/.build/package-arm64"
+INTEL_SCRATCH="$PROJECT_DIR/.build/package-x86_64"
+swift build --scratch-path "$ARM_SCRATCH" -c "$BUILD_CONFIGURATION" --triple arm64-apple-macosx --product Renotch
+swift build --scratch-path "$ARM_SCRATCH" -c "$BUILD_CONFIGURATION" --triple arm64-apple-macosx --product RenotchBrowserBridge
+swift build --scratch-path "$INTEL_SCRATCH" -c "$BUILD_CONFIGURATION" --triple x86_64-apple-macosx --product Renotch
+swift build --scratch-path "$INTEL_SCRATCH" -c "$BUILD_CONFIGURATION" --triple x86_64-apple-macosx --product RenotchBrowserBridge
 
-BIN_DIR_ARM64="$(swift build -c "$BUILD_CONFIGURATION" --triple arm64-apple-macosx --show-bin-path)"
-BIN_DIR_X86="$(swift build -c "$BUILD_CONFIGURATION" --triple x86_64-apple-macosx --show-bin-path)"
+BIN_DIR_ARM64="$(swift build --scratch-path "$ARM_SCRATCH" -c "$BUILD_CONFIGURATION" --triple arm64-apple-macosx --show-bin-path)"
+BIN_DIR_X86="$(swift build --scratch-path "$INTEL_SCRATCH" -c "$BUILD_CONFIGURATION" --triple x86_64-apple-macosx --show-bin-path)"
 
 rm -rf "$APP_PATH"
 mkdir -p "$CONTENTS_PATH/MacOS" "$CONTENTS_PATH/Resources"

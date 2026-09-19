@@ -24,10 +24,11 @@ private enum GlassMaterialLevel: Double, CaseIterable, Identifiable {
     }
 }
 
-private enum SettingsTab: String, CaseIterable, Identifiable {
+enum SettingsTab: String, CaseIterable, Identifiable {
     case general = "General"
     case appearance = "Appearance"
     case blocker = "Focus Blocker"
+    case aiUsage = "AI Usage"
     case privacy = "Privacy"
 
     var id: String { rawValue }
@@ -37,6 +38,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: return "通用"
         case .appearance: return "外观"
         case .blocker: return "专注拦截"
+        case .aiUsage: return "AI 用量"
         case .privacy: return "隐私"
         }
     }
@@ -46,6 +48,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: return "switch.2"
         case .appearance: return "sparkles"
         case .blocker: return "shield.lefthalf.filled"
+        case .aiUsage: return "chart.bar.fill"
         case .privacy: return "hand.raised.fill"
         }
     }
@@ -55,15 +58,23 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: return "行为、显示位置与延迟"
         case .appearance: return "刘海样式、尺寸与边距"
         case .blocker: return "分心网站拦截与全屏幕拦截页"
+        case .aiUsage: return "Codex、Claude Code 限额与 DeepSeek 余额"
         case .privacy: return "通知与隐私承诺"
         }
     }
 }
 
+/// The selected Settings tab, owned by the window controller so other parts of
+/// the app (the AI 用量 cards' 前往设置) can open a specific tab.
+@MainActor
+final class SettingsNavigation: ObservableObject {
+    @Published var selectedTab: SettingsTab = .general
+}
+
 struct SettingsView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var screenManager: ScreenManager
-    @State private var selectedTab: SettingsTab = .general
+    @EnvironmentObject private var navigation: SettingsNavigation
     @State private var newRuleInput = ""
 
     var body: some View {
@@ -123,10 +134,10 @@ struct SettingsView: View {
                 ForEach(SettingsTab.allCases) { tab in
                     SidebarTabButton(
                         tab: tab,
-                        isSelected: selectedTab == tab
+                        isSelected: navigation.selectedTab == tab
                     ) {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                            selectedTab = tab
+                            navigation.selectedTab = tab
                         }
                     }
                 }
@@ -181,23 +192,25 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 20) {
                 // Header Title
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(selectedTab.title)
+                    Text(navigation.selectedTab.title)
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                         .foregroundStyle(.primary)
 
-                    Text(selectedTab.subtitle)
+                    Text(navigation.selectedTab.subtitle)
                         .font(.system(size: 12, weight: .regular))
                         .foregroundStyle(.secondary)
                 }
                 .padding(.bottom, 4)
 
-                switch selectedTab {
+                switch navigation.selectedTab {
                 case .general:
                     generalTabContent
                 case .appearance:
                     appearanceTabContent
                 case .blocker:
                     focusBlockerTabContent
+                case .aiUsage:
+                    AIUsageSettingsView(aiUsage: model.aiUsage)
                 case .privacy:
                     privacyTabContent
                 }
@@ -697,10 +710,18 @@ struct SettingsView: View {
                             .font(.system(size: 14))
                             .foregroundStyle(.secondary)
 
-                        Text("无需账户，没有云同步，也不收集分析数据。你的所有数据都只保存在这台 Mac 上。")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineSpacing(2)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("无需账户，没有云同步，也不收集分析数据。你的所有数据都只保存在这台 Mac 上。")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineSpacing(2)
+
+                            Text("例外：如果你在“AI 用量”中保存了 DeepSeek API 密钥，Re:notch 会用它直接向 api.deepseek.com 查询账户余额。")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineSpacing(2)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
                 }
             }
@@ -1128,7 +1149,7 @@ private struct SidebarTabButton: View {
     }
 }
 
-private struct SettingCard<Content: View>: View {
+struct SettingCard<Content: View>: View {
     let title: String
     let icon: String
     let iconColor: Color
@@ -1176,7 +1197,7 @@ private struct SettingCard<Content: View>: View {
     }
 }
 
-private struct SettingRow<Control: View>: View {
+struct SettingRow<Control: View>: View {
     let title: String
     let subtitle: String
     @ViewBuilder let control: () -> Control

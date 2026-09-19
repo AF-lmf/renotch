@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "model": "opus",
+  "env": {},
+  "permissions": {
+    "allow": [
+      "Bash(git status:*)"
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "bash -c 'plugin_dir=$(ls -d \"${CLAUDE_CONFIG_DIR:-$HOME/.claude}\"/plugins/cache/*/claude-hud/*/ 2>/dev/null | tail -1); exec node \"${plugin_dir}dist/index.js\"'",
+    "padding": 0
+  },
+  "enabledPlugins": {
+    "claude-hud@claude-hud": true
+  }
+}

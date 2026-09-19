@@ -1,0 +1,1 @@
+{"statusLine":{"type":"command","command":"echo first"},"statusLine":{"type":"command","command":"echo 'last wins' \"$COLUMNS\""}}

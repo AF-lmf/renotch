@@ -21,6 +21,7 @@ final class DeveloperActivityService: ObservableObject {
     private var priorRunningContainerIDs = Set<String>()
     private var recentCompletions: [DeveloperActivity] = []
     private var glanceWorkItem: DispatchWorkItem?
+    private let automaticallyRefresh: Bool
 
     var primaryActivity: DeveloperActivity {
         // Let a freshly completed task briefly take over the compact notch so
@@ -50,7 +51,8 @@ final class DeveloperActivityService: ObservableObject {
         activities.filter { $0.state == .running }.count
     }
 
-    init() {
+    init(automaticallyRefresh: Bool = true) {
+        self.automaticallyRefresh = automaticallyRefresh
         start()
     }
 
@@ -72,6 +74,7 @@ final class DeveloperActivityService: ObservableObject {
     }
 
     private func startTimer(interval: TimeInterval) {
+        guard automaticallyRefresh else { return }
         refreshTimer?.invalidate()
         refresh()
         let timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
@@ -219,7 +222,7 @@ final class DeveloperActivityService: ObservableObject {
         isRefreshing = false
     }
 
-    private func present(_ nextGlance: DeveloperActivityGlance) {
+    func present(_ nextGlance: DeveloperActivityGlance, duration: TimeInterval = 5) {
         glanceWorkItem?.cancel()
         glance = nextGlance
         let glanceID = nextGlance.id
@@ -228,7 +231,7 @@ final class DeveloperActivityService: ObservableObject {
             self?.glance = nil
         }
         glanceWorkItem = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5, execute: work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: work)
     }
 
     private static func sortActivities(_ activities: [DeveloperActivity]) -> [DeveloperActivity] {

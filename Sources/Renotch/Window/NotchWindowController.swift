@@ -146,7 +146,8 @@ final class NotchWindowController: NSWindowController {
                 settings.compactWidth,
                 settings.expandedWidth,
                 NotchSettings.dragWidth,
-                NotchSettings.systemExpandedWidth
+                NotchSettings.systemExpandedWidth,
+                NotchSettings.aiUsageExpandedWidth
             )
                 + NotchLayout.shadowHorizontalPadding * 2,
             height: max(
@@ -154,7 +155,9 @@ final class NotchWindowController: NSWindowController {
                 settings.expandedHeight + notchHeightOffset,
                 NotchSettings.dragHeight,
                 NotchSettings.codingExpandedHeight,
-                NotchSettings.systemExpandedHeight + notchHeightOffset
+                NotchSettings.systemExpandedHeight + notchHeightOffset,
+                // The AI 用量 minimum grows with the bottom dock.
+                max(settings.expandedHeight, settings.resolvedAIUsageExpandedHeight) + notchHeightOffset
             )
                 + NotchLayout.shadowBottomPadding
         )

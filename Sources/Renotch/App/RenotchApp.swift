@@ -60,6 +60,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         _ = try? BrowserIntegrationInstaller.installBundledHost()
         notchController = NotchWindowController(model: model, screenManager: screenManager)
         settingsController = SettingsWindowController(model: model, screenManager: screenManager)
+        // Heals the Claude Code wrapper if it went missing; touches only Re:notch's
+        // support directory, never ~/.claude.
+        model.aiUsage.performLaunchMaintenance()
         if model.settings.isEnabled {
             notchController?.show()
         }
@@ -83,8 +86,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         notchController?.restart()
     }
 
-    func openSettings() {
-        settingsController?.present()
+    func openSettings(tab: SettingsTab? = nil) {
+        settingsController?.present(tab: tab)
     }
 
     func checkForUpdates() {

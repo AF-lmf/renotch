@@ -51,14 +51,7 @@ struct CompactNotchView: View {
     }
 
     private var livePresentation: AdaptiveCompactPresentation {
-        AdaptiveCompactArbitrator.resolve(
-            authGlance: model.authGlance,
-            downloadAvailable: browser.activeDownload != nil,
-            codingGlanceAvailable: activity.glance != nil,
-            mediaSource: model.activeMediaSource,
-            configuredContent: model.settings.resolvedCompactContent,
-            isTimerActive: timer.isActive
-        )
+        model.compactPresentation
     }
 
     @ViewBuilder
@@ -82,7 +75,11 @@ struct CompactNotchView: View {
         case .todo:
             CompactTodoView(store: todos, message: model.transientMessage)
         case .system:
-            CompactSystemView(state: model.systemMetrics)
+            CompactSystemView(
+                state: model.systemMetrics,
+                aiUsage: model.aiUsage,
+                showsAIUsage: model.settings.compactSystemShowsAIUsage
+            )
         }
     }
 

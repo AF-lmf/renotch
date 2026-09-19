@@ -3,10 +3,13 @@ import SwiftUI
 
 @MainActor
 final class SettingsWindowController: NSWindowController, NSWindowDelegate {
+    private let navigation = SettingsNavigation()
+
     init(model: AppModel, screenManager: ScreenManager) {
         let content = SettingsView()
             .environmentObject(model)
             .environmentObject(screenManager)
+            .environmentObject(navigation)
         let hostingController = NSHostingController(rootView: content)
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 960, height: 640),
@@ -36,7 +39,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         fatalError("init(coder:) has not been implemented")
     }
 
-    func present() {
+    /// Opens the window, switching to `tab` first when one is given.
+    func present(tab: SettingsTab? = nil) {
+        if let tab { navigation.selectedTab = tab }
         guard let window else { return }
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)

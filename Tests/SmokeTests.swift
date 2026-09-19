@@ -66,7 +66,19 @@ struct SmokeTests {
         expect(NotchSettings.default.expandedHeight == 209, "expanded menu height")
         expect(NotchSettings.codingExpandedWidth == 500, "coding menu width")
         expect(NotchSettings.codingExpandedHeight == 240, "coding menu height")
-        expect(NotchSettings.expandedMinWidth == 470, "expanded header minimum width")
+        expect(NotchSettings.expandedMinWidth == 480, "expanded header minimum width")
+        expect(NotchSettings.aiUsageExpandedWidth == 520, "AI usage menu width")
+        expect(NotchSettings.aiUsageExpandedHeight == 209, "AI usage menu height")
+        expect(NotchSettings.bottomDockReservedHeight == 41, "bottom dock reserved height")
+        expect(NotchSettings.default.resolvedAIUsageExpandedHeight == 209, "default AI usage height")
+        var bottomDockSettings = NotchSettings.default
+        bottomDockSettings.headerNavigationStyle = .bottomDock
+        expect(bottomDockSettings.resolvedAIUsageExpandedHeight == 250, "AI usage height leaves room for the bottom dock")
+        expect(NotchSection.allCases.contains(.aiUsage), "AI usage section exists")
+        expect(
+            !CompactNotchContent.allCases.contains { $0.section == .aiUsage },
+            "AI usage has no compact view"
+        )
         expect(NotchSettings.default.resolvedCompactCornerRadius == 11, "default compact corner radius")
         expect(NotchSettings.default.resolvedCompactContentLeadingPadding == 19, "default compact content leading padding")
         expect(NotchSettings.default.resolvedCompactContentTrailingPadding == 19, "default compact content trailing padding")
