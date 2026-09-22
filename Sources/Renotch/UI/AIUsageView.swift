@@ -247,34 +247,6 @@ private struct AIUsageCard: View {
                     AIUsageLimitRowView(cardTitle: model.title, row: row, display: row.display(now: now))
                 }
             }
-        case let .limitGroups(groups):
-            VStack(alignment: .leading, spacing: 10) {
-                ForEach(groups) { group in
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(spacing: 4) {
-                            Text(group.title)
-                                .font(.system(size: 9, weight: .semibold))
-                                .lineLimit(1)
-                                .fixedSize(horizontal: true, vertical: false)
-                                .foregroundStyle(.white.opacity(0.85))
-                            Spacer(minLength: 0)
-                            if let date = group.observedAt {
-                                Text(AIUsageFormatting.ageText(since: date, now: now))
-                                    .font(.system(size: 7.5))
-                                    .foregroundStyle(Color.notchMuted)
-                                    .lineLimit(1)
-                            }
-                        }
-                        if let text = group.emptyText {
-                            Text(text).font(.system(size: 9)).foregroundStyle(Color.notchMuted)
-                        }
-                        ForEach(group.rows) { row in
-                            AIUsageLimitRowView(cardTitle: "\(model.title) \(group.title)", row: row, display: row.display(now: now))
-                        }
-                    }
-                    .help(group.observedAt.map(AIUsageFormatting.updatedAbsoluteText) ?? "最近 8 天没有相应额度记录。")
-                }
-            }
         case let .balance(balance):
             balanceBody(balance)
         }

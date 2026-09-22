@@ -93,7 +93,7 @@ struct CompactSystemLayoutTests {
                     let preview = ImageRenderer(content: view.background(Color.black).environment(\.colorScheme, .dark))
                     preview.scale = 2
                     if let image = preview.cgImage {
-                        try? NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: "/tmp/renotch-spark-layout.png"))
+                        try? NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: "/tmp/renotch-ai-layout.png"))
                     }
                 }
             }

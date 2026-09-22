@@ -21,7 +21,7 @@ Turn your Mac's notch into a lightweight, native developer command center.
 This fork's `feature/system-metrics` branch adds:
 
 - **System metrics**: CPU, GPU, memory, network, battery, temperature, fans and process activity, with a compact C/G/M/N display that adapts to the available width.
-- **AI usage**: Codex regular and 5.3 Spark independent limits from local logs (with separate record ages and reset states), an opt-in Claude Code status-line bridge, and optional DeepSeek balance queries with the API key stored in macOS Keychain. Hidden AI views stop automatic polling.
+- **AI usage**: Codex account-wide limits from local logs (with record age and reset states), an opt-in Claude Code status-line bridge, and optional DeepSeek balance queries with the API key stored in macOS Keychain. Hidden AI views stop automatic polling.
 - **Simplified Chinese UI** and update-check fixes. Automatic upstream update checks are disabled by default for this fork.
 
 - **Dev Activity**: Track local servers, ports, Git status, Docker containers, and build jobs.

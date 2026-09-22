@@ -11,9 +11,9 @@ import Foundation
 /// 2. reads only the bytes appended to known files since the last refresh;
 /// 3. spends a bounded byte budget reading unexplored history backwards,
 ///    newest-mtime file first, until each file hits a line older than the
-///    oldest of the latest Codex and Spark snapshots already known, or
+///    newest account-wide Codex snapshot already known, or
 ///    reaches its start.
-/// A file whose mtime is older than both known bucket snapshots cannot hold
+/// A file whose mtime is older than the known account-wide snapshot cannot hold
 /// a newer one and is never opened. Not thread-safe: own one per serial queue.
 final class CodexRateLimitReader {
     struct Limits: Sendable {
@@ -49,7 +49,7 @@ final class CodexRateLimitReader {
         var forwardFrom: UInt64
         /// Backward exploration resumes here.
         var backwardFrom: UInt64
-        /// History below `backwardFrom` cannot beat either displayed bucket snapshot.
+        /// History below `backwardFrom` cannot beat the displayed account-wide snapshot.
         var historyDone: Bool
     }
 
@@ -58,13 +58,11 @@ final class CodexRateLimitReader {
     private let scanner = CodexLogLineScanner()
     private var files: [String: FileState] = [:]
     private var latest: [String: CodexRateLimitSnapshot] = [:]
-    /// Each displayed bucket needs its own latest record. A recent account-wide
-    /// record must not prevent us finding an older, still-valid Spark record.
+    /// Only account-wide limits are displayed; do not search older history for
+    /// retired model-specific buckets once that snapshot is known.
     private var historyFloorTimestamp: String?
     private var historyFloor: Date? {
-        guard let main = latest[CodexRateLimitSnapshot.mainLimitID],
-              let spark = latest[CodexRateLimitSnapshot.sparkLimitID] else { return nil }
-        return min(main.observedAt, spark.observedAt)
+        latest[CodexRateLimitSnapshot.mainLimitID]?.observedAt
     }
 
     init(codexHome: URL, limits: Limits = Limits()) {

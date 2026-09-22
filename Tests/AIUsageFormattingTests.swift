@@ -176,12 +176,7 @@ struct AIUsageFormattingTests {
             )
             let reading = CodexUsageReading(status: .ok, main: main, additional: [sparkRecent], scannedFiles: 1, scannedBytes: 10)
             let loaded = card(reading)
-            if case .limitGroups(let groups) = loaded.body {
-                let rows = groups[0].rows
-                expect(groups.map(\.title), ["常规额度", "5.3 Spark"], "separate bucket labels")
-                expect(groups[1].rows.map(\.id), ["spark.300", "spark.10080"], "spark window ids")
-                expect(groups[1].rows.map(\.usedPercent), [1, 0], "spark independent usage")
-                expect(groups[1].observedAt, sparkRecent.observedAt, "spark keeps its own observation time")
+            if case .limits(let rows) = loaded.body {
                 expect(rows.map(\.id), ["codex.300", "codex.10080"], "codex rows sorted by length, capped at two")
                 expect(rows.map(\.title), ["5 小时", "每周"], "codex row titles")
                 expect(rows.map(\.usedPercent), [12, 85], "codex row values")
@@ -192,19 +187,21 @@ struct AIUsageFormattingTests {
             expect(loaded.trailing, .age(text: "3 分钟前", tone: .muted), "codex fresh age")
             let help = loaded.help ?? ""
             let helpLines = help.components(separatedBy: "\n")
-            expectTrue(help.contains("独立额度") && help.contains("本机 Codex 日志"), "source and independent limits explained")
+            expectTrue(help.contains("本机 Codex 日志"), "source explained")
+            expectTrue(!help.contains("Spark") && !help.contains("独立额度"), "retired Spark is absent from tooltip")
             expectTrue(helpLines.contains("套餐：Pro Lite"), "plan preserved")
             expectTrue(!help.contains("credit"), "credits never shown")
             let mainOnly = card(CodexUsageReading(status: .ok, main: main, additional: [], scannedFiles: 1, scannedBytes: 1))
-            if case .limitGroups(let groups) = mainOnly.body {
-                expect(groups[1].rows.count, 0, "missing Spark is not copied from main")
-                expect(groups[1].emptyText, "暂无本机额度记录", "Spark missing state")
-            } else { failures.append("main-only groups") }
+            expect(mainOnly, loaded, "historical Spark data has no effect on card or tooltip")
             let sparkOnly = card(CodexUsageReading(status: .ok, main: nil, additional: [sparkRecent], scannedFiles: 1, scannedBytes: 1))
-            if case .limitGroups(let groups) = sparkOnly.body {
-                expect(groups[0].rows.count, 0, "Spark-only does not impersonate main")
-                expect(groups[1].rows.count, 2, "Spark-only remains visible")
-            } else { failures.append("Spark-only groups") }
+            expect(sparkOnly, card(.empty), "Spark-only logs show no account-wide limits")
+            let freshSpark = CodexRateLimitSnapshot(limitID: sparkRecent.limitID, limitName: sparkRecent.limitName,
+                windows: sparkRecent.windows, credits: nil, planType: nil, reachedType: nil, observedAt: now)
+            expect(card(CodexUsageReading(status: .ok, main: main, additional: [freshSpark], scannedFiles: 1, scannedBytes: 1)),
+                   loaded, "newer retired bucket cannot change account-wide freshness")
+            expect(card(CodexUsageReading(status: .ok, main: nil, additional: [sparkRecent], scannedFiles: 1,
+                                          scannedBytes: 1, isComplete: false)).body,
+                   loading.body, "Spark-only incomplete history keeps searching for account-wide limits")
 
             var old = sparkRecent
             old = CodexRateLimitSnapshot(limitID: old.limitID, limitName: old.limitName, windows: old.windows, credits: nil,
@@ -215,8 +212,7 @@ struct AIUsageFormattingTests {
             let stale = card(CodexUsageReading(status: .ok, main: staleMain, additional: [old], scannedFiles: 1, scannedBytes: 1))
             expect(stale.trailing, .age(text: "1 天前", tone: .amber), "codex stale age turns amber")
             expectTrue(!(stale.help ?? "").contains("套餐"), "missing plan is left out")
-            if case .limitGroups(let groups) = stale.body {
-                let rows = groups[0].rows
+            if case .limits(let rows) = stale.body {
                 expect(rows.map(\.limitReached), [true, true], "reached type marks the rows")
             } else {
                 failures.append("codex stale body")

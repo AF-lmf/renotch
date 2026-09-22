@@ -106,19 +106,10 @@ struct AIUsageBalanceBody: Equatable, Sendable {
     let accessibilityValue: String
 }
 
-struct AIUsageLimitGroup: Equatable, Sendable, Identifiable {
-    let id: String
-    let title: String
-    let rows: [AIUsageLimitRow]
-    let observedAt: Date?
-    let emptyText: String?
-}
-
 enum AIUsageCardBody: Equatable, Sendable {
     case loading(String)
     case message(AIUsageMessage)
     case limits([AIUsageLimitRow])
-    case limitGroups([AIUsageLimitGroup])
     case balance(AIUsageBalanceBody)
 }
 
@@ -258,8 +249,7 @@ enum AIUsagePresentation {
                 action: nil
             )))
         }
-        let spark = reading.additional.first { $0.limitID == CodexRateLimitSnapshot.sparkLimitID }
-        if reading.main == nil && spark == nil {
+        guard let main = reading.main else {
             if !reading.isComplete { return card(loading) }
             return card(.message(AIUsageMessage(
                 icon: "clock", title: "暂无限额数据",
@@ -267,22 +257,16 @@ enum AIUsagePresentation {
                 tone: .muted, action: nil
             )))
         }
-        func group(_ snapshot: CodexRateLimitSnapshot?, id: String, title: String) -> AIUsageLimitGroup {
-            let rows = (snapshot?.windows ?? []).sorted { $0.windowMinutes < $1.windowMinutes }.prefix(2).map { window in
-                AIUsageLimitRow(id: "\(id).\(window.windowMinutes)", title: window.label,
-                                usedPercent: window.usedPercent, resetsAt: window.resetsAt,
-                                limitReached: snapshot?.reachedType != nil)
-            }
-            return AIUsageLimitGroup(id: id, title: title, rows: Array(rows), observedAt: snapshot?.observedAt,
-                                    emptyText: rows.isEmpty ? (reading.isComplete ? "暂无本机额度记录" : "正在查找记录…") : nil)
+        let rows = main.windows.sorted { $0.windowMinutes < $1.windowMinutes }.prefix(2).map { window in
+            AIUsageLimitRow(id: "codex.\(window.windowMinutes)", title: window.label,
+                            usedPercent: window.usedPercent, resetsAt: window.resetsAt,
+                            limitReached: main.reachedType != nil)
         }
-        let groups = [group(reading.main, id: "codex", title: "常规额度"),
-                      group(spark, id: "spark", title: "5.3 Spark")]
-        let dates = [reading.main?.observedAt, spark?.observedAt].compactMap { $0 }
-        var help = ["常规与 Spark 使用独立额度，均来自本机 Codex 日志。",
+        var help = [AIUsageFormatting.updatedAbsoluteText(main.observedAt),
+                    "额度来自本机 Codex 日志。",
                     "记录可能滞后；其他设备的使用会在 Codex 下次更新记录后反映。"]
-        if let plan = reading.main?.planDisplayName { help.append("套餐：\(plan)") }
-        return card(.limitGroups(groups), trailing: dates.max().map { logAge($0, now: now) } ?? .none,
+        if let plan = main.planDisplayName { help.append("套餐：\(plan)") }
+        return card(.limits(Array(rows)), trailing: logAge(main.observedAt, now: now),
                     help: help.joined(separator: "\n"))
     }
 
